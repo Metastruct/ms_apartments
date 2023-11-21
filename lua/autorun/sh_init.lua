@@ -7,6 +7,7 @@ _M.Apartments = Apartments
 Apartments.NUM_ROOMS = 12
 Apartments.List = Apartments.List or {}
 Apartments.Tenants = Apartments.Tenants or {}
+Apartments.Triggers = Apartments.Triggers or {}
 Apartments.Entrances = Apartments.Entrances or {}
 
 -- includes
