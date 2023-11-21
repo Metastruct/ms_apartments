@@ -28,7 +28,7 @@ local function should_entity_be_in_trigger(ent, trigger)
 	local room_n = Apartments.Triggers[trigger]
 	local room = Apartments.List[room_n]
 
-	if not room.tenant or owner == room.tenant or room.invitees[owner:SteamID64()] or (room.friendly and room.tenant.IsFriend and room.tenant:IsFriend(ent)) then return true end
+	if not room.tenant or owner == room.tenant or room.invitees[owner:SteamID64()] or (room.friendly and room.tenant.IsFriend and room.tenant:IsFriend(owner)) then return true end
 
 	return false
 end
