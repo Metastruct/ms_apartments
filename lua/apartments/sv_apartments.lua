@@ -28,7 +28,8 @@ local function should_entity_be_in_trigger(ent, trigger)
 	local room_n = Apartments.Triggers[trigger]
 	local room = Apartments.List[room_n]
 
-	if not room.tenant or owner == room.tenant or room.invitees[owner:SteamID64()] or (room.friendly and room.tenant.IsFriend and room.tenant:IsFriend(owner)) then return true end
+	if not room.tenant or owner == room.tenant or room.invitees[owner:SteamID64()] then return true end
+	if room.friendly and room.tenant.IsFriend and room.tenant:IsFriend(owner) then return true end
 
 	return false
 end
@@ -74,11 +75,10 @@ end
 
 hook.Add("TriggerPreInclude", "apartment_triggers", setup_triggers)
 
-local NET_INFO = 3
-
 -- What has changed?
 local NET_RENT = 0
 local NET_INVITE = 1
+local NET_INFO = 2
 
 -- The change itself
 local NET_KICK = 0
@@ -123,7 +123,7 @@ local function network_info(broadcast, ply)
 	net[broadcast and "Broadcast" or "Send"](ply)
 end
 
-local function epicfail(sender, room)
+local function is_tampering(sender, room)
 	if not Apartments.Tenants[sender] or room.tenant ~= sender then
 		log_event("warn", "Sending off", sender, "for tampering!")
 		skid_kick(sender)
@@ -143,7 +143,7 @@ local function receive_rent_change(sender, room_n, change)
 	end
 
 	if change == NET_KICK then
-		if epicfail(sender, room) then return end
+		if is_tampering(sender, room) then return end
 		Apartments.Evict(sender)
 	end
 end
@@ -152,21 +152,21 @@ local function receive_invite_change(sender, room_n, change, target)
 	local room = Apartments.List[room_n]
 
 	if change == NET_ADMIT then
-		if epicfail(sender, room) then return end
+		if is_tampering(sender, room) then return end
 		Apartments.Invite(room_n, target)
 
 		return
 	end
 
 	if change == NET_KICK then
-		if epicfail(sender, room) then return end
+		if is_tampering(sender, room) then return end
 		Apartments.Kick(room_n, target)
 
 		return
 	end
 
 	if change == NET_SET_PUBLIC then
-		if epicfail(sender, room) then return end
+		if is_tampering(sender, room) then return end
 		room.public = not room.public
 
 		sender:ChatPrint("Your room is now " .. (room.public and "public" or "private") .. ".")
@@ -183,15 +183,10 @@ local function receive_invite_change(sender, room_n, change, target)
 	end
 
 	if change == NET_INVITE_FRIENDS then
-		if epicfail(sender, room) then return end
+		if is_tampering(sender, room) then return end
 		Apartments.List[room_n].friendly = not Apartments.List[room_n].friendly
 	end
 end
-
-local type_map = {
-	[NET_RENT] = receive_rent_change,
-	[NET_INVITE] = receive_invite_change
-}
 
 net.Receive(tag, function(_, sender)
 	local net_type = net.ReadInt(3)
@@ -201,7 +196,15 @@ net.Receive(tag, function(_, sender)
 	local target
 	if net_type == NET_INVITE and change <= NET_ADMIT then target = net.ReadEntity() end
 
-	type_map[net_type](sender, room_n, change, target)
+	if net_type == NET_RENT then
+		receive_rent_change(sender, room_n, change, target)
+
+		return
+	end
+
+	if net_type == NET_INVITE then
+		receive_invite_change(sender, room_n, change, target)
+	end
 end)
 
 local box_bounds = Vector(370, 370, 5)

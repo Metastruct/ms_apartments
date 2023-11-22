@@ -109,7 +109,7 @@ local function Draw3DSkyboxStuff(ep)
 
 	render.Model({
 		model = "models/props_phx/huge/evildisc_corp.mdl",
-		pos = Vector(0,0,0) + mat:GetTranslation(),
+		pos = Vector(0, 0, 0) + mat:GetTranslation(),
 		angle = rot
 	}, mtmp)
 
@@ -122,8 +122,8 @@ local skyboxes = {}
 
 local files = file.Find("materials/skybox/*.vmt","GAME")
 
-	for k,v in next,files do
-		local skyname = v:match"^(.+)up%.vmt$"
+	for k,v in next, files do
+		local skyname = v:match("^(.+)up%.vmt$")
 		if skyname then
 			skyboxes[skyname] = true
 		end
@@ -133,9 +133,9 @@ files = nil
 
 local skyboxes_hdronly = {}
 
-for name,_ in next,skyboxes do
+for name, _ in next, skyboxes do
 	if name:find"_hdr$" then
-		name = name:gsub("_hdr$","")
+		name = name:gsub("_hdr$", "")
 		if skyboxes[name] then
 			skyboxes_hdronly[name] = true
 		end
@@ -154,11 +154,11 @@ local m = ClientsideModel(mdl, RENDERMODE_NONE)
 m:SetRenderMode(RENDERMODE_NONE)
 m:SetNoDraw(true)
 
-local scale = Vector( 1,1,1 )
+local scale = Vector(1, 1, 1)
 _G.dropship_ent = m
 
 local mat = Matrix()
-mat:Scale( scale )
+mat:Scale(scale)
 m:EnableMatrix("RenderMultiply", mat)
 
 local skybox_apmnt = landmark.get("skybox_apmnt")

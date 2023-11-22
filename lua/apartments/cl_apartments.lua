@@ -52,11 +52,10 @@ for i = 1, 3 do
 	table.insert(logo, i)
 end
 
-local NET_INFO = 3
-
 -- What has changed?
 local NET_RENT = 0
 local NET_INVITE = 1
+local NET_INFO = 2
 
 -- The change itself
 local NET_KICK = 0
@@ -125,11 +124,6 @@ local function receive_info(networked_entrances, networked_tenants)
 	end
 end
 
-local type_map = {
-	[NET_RENT] = receive_rent_change,
-	[NET_INFO] = receive_info
-}
-
 net.Receive(tag, function()
 	local net_type = net.ReadInt(3)
 
@@ -139,7 +133,7 @@ net.Receive(tag, function()
 		local tenants_size = net.ReadUInt(16)
 		local tenants_networkable = net.ReadData(tenants_size)
 
-		type_map[net_type](entrances_networkable, tenants_networkable)
+		receive_info(entrances_networkable, tenants_networkable)
 		return
 	end
 
@@ -148,7 +142,7 @@ net.Receive(tag, function()
 
 	local ply = net.ReadEntity()
 
-	type_map[net_type](ply, room_n, change)
+	receive_rent_change(ply, room_n, change)
 end)
 
 local DefaultColors = {}
