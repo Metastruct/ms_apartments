@@ -1,3 +1,6 @@
+require("landmark")
+if not landmark or not landmark.get("apartments") then return end
+
 module("ms", package.seeall)
 local tag = "ms_apartments"
 
