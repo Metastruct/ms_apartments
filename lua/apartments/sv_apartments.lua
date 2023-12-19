@@ -287,6 +287,7 @@ function Apartments.Evict(ply)
 	room.invitees = {}
 	room.tenant = nil
 	room.public = false
+	room.friendly = false
 
 	ply:ChatPrint("You no longer own " .. room.name .. "!")
 	ply:EmitSound("doors/door1_stop.wav")
