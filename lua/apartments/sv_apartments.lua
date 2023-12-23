@@ -185,6 +185,16 @@ local function receive_invite_change(sender, room_n, change, target)
 	if change == NET_INVITE_FRIENDS then
 		if is_tampering(sender, room) then return end
 		Apartments.List[room_n].friendly = not Apartments.List[room_n].friendly
+
+		sender:ChatPrint("Your room is now " .. (room.friendly and "open to friends" or "no longer open to friends") .. ".")
+		log_event("info", room.name, "has been set to", room.friendly and "friendly" or "not friendly")
+
+		if room.friendly then return end
+		for to_kick, _ in pairs(room.trigger:GetPlayers()) do
+			if to_kick.Unrestricted or to_kick == sender or room.invitees[to_kick:SteamID64()] then continue end
+
+			kick_player_out(to_kick)
+		end
 	end
 end
 
