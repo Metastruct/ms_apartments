@@ -112,7 +112,7 @@ local function receive_info(networked_entrances, networked_tenants)
 
 	Apartments.Entrances = entrances
 	for tenant_sid64, room_n in pairs(networked_tenants) do
-		receive_rent_change(tenant_sid64, room_n, NET_ADMIT)
+		receive_rent_change(tostring(tenant_sid64), room_n, NET_ADMIT)
 	end
 end
 

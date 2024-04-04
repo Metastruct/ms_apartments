@@ -1,5 +1,3 @@
--- TODO: use sid64 instead of entities
-
 module("ms", package.seeall)
 local tag = "ms_apartments"
 
