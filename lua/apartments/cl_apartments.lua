@@ -2,6 +2,7 @@ module("ms", package.seeall)
 local tag = "ms_apartments"
 
 local null = NULL
+local get_by_sid64 = player.GetBySteamID64
 
 surface.CreateFont("apartments_name", {
 	font = "Segoe UI Semibold",
@@ -16,7 +17,6 @@ surface.CreateFont("apartments_sub", {
 	size = 24,
 	weight = 500,
 })
-
 
 local color_white = Color(255, 255, 255, 255)
 local color_black = Color(0, 0, 0, 255)
@@ -52,12 +52,10 @@ for i = 1, 3 do
 	table.insert(logo, i)
 end
 
--- What has changed?
 local NET_RENT = 0
 local NET_INVITE = 1
 local NET_INFO = 2
 
--- The change itself
 local NET_KICK = 0
 local NET_ADMIT = 1
 local NET_SET_PUBLIC = 2
@@ -82,16 +80,16 @@ local function network_invite_change(room_n, change, target)
 	net.SendToServer()
 end
 
-local function receive_rent_change(ply, room_n, change)
+local function receive_rent_change(ply_sid64, room_n, change)
 	if change == NET_ADMIT then
-		Apartments.List[room_n].tenant = ply
-		Apartments.Tenants[ply] = room_n
+		Apartments.List[room_n].tenant = ply_sid64
+		Apartments.Tenants[ply_sid64] = room_n
 
 		return
 	end
 
 	if change == NET_KICK then
-		Apartments.Tenants[ply] = nil
+		Apartments.Tenants[ply_sid64] = nil
 
 		local room = Apartments.List[room_n]
 		room.tenant = nil
@@ -102,9 +100,9 @@ end
 
 local function receive_info(networked_entrances, networked_tenants)
 	networked_entrances = util.Decompress(networked_entrances)
-	networked_tenants = util.Decompress(networked_tenants)
-
 	networked_entrances = util.JSONToTable(networked_entrances)
+
+	networked_tenants = util.Decompress(networked_tenants)
 	networked_tenants = util.JSONToTable(networked_tenants)
 
 	local entrances = {}
@@ -112,15 +110,9 @@ local function receive_info(networked_entrances, networked_tenants)
 		entrances[Entity(entrance_index)] = room_n
 	end
 
-	local tenants = {}
-	for tenant_index, room_n in pairs(networked_tenants) do
-		tenants[tenant_index] = nil
-		tenants[Entity(tenant_index)] = room_n
-	end
-
 	Apartments.Entrances = entrances
-	for tenant, room_n in pairs(tenants) do
-		receive_rent_change(tenant, room_n, NET_ADMIT)
+	for tenant_sid64, room_n in pairs(networked_tenants) do
+		receive_rent_change(tenant_sid64, room_n, NET_ADMIT)
 	end
 end
 
@@ -140,9 +132,9 @@ net.Receive(tag, function()
 	local room_n = net.ReadInt(5)
 	local change = net.ReadInt(3)
 
-	local ply = net.ReadEntity()
+	local ply_sid64 = net.ReadString()
 
-	receive_rent_change(ply, room_n, change)
+	receive_rent_change(ply_sid64, room_n, change)
 end)
 
 local DefaultColors = {}
@@ -271,8 +263,8 @@ end
 local function rent_ui(room_n)
 	local room = Apartments.List[room_n]
 
-	local tenant = room.tenant
-	local am_renting = Apartments.Tenants[player.GetByID(LocalPlayer():EntIndex())]
+	local tenant = get_by_sid64(room.tenant)
+	local am_renting = Apartments.Tenants[LocalPlayer():SteamID64()]
 	local rented_by_me = tenant == LocalPlayer()
 
 	local frame_w, frame_h = 200, 150
@@ -427,7 +419,7 @@ local function PostDrawOpaqueRenderables_Doors()
 		local cscale = .1
 
 		cam.Start3D2D(cpos, cang, cscale)
-		draw_door_sign(room_n, room.tenant)
+		draw_door_sign(room_n, get_by_sid64(room.tenant))
 		cam.End3D2D()
 	end
 end

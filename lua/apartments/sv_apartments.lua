@@ -1,5 +1,9 @@
+-- TODO: use sid64 instead of entities
+
 module("ms", package.seeall)
 local tag = "ms_apartments"
+
+local get_by_sid64 = player.GetBySteamID64
 
 local function log_event(log_type, ...)
 	if not metalog or not metalog[log_type] then return end
@@ -28,8 +32,10 @@ local function should_entity_be_in_trigger(ent, trigger)
 	local room_n = Apartments.Triggers[trigger]
 	local room = Apartments.List[room_n]
 
-	if not room.tenant or owner == room.tenant or room.invitees[owner:SteamID64()] then return true end
-	if room.friendly and room.tenant.IsFriend and room.tenant:IsFriend(owner) then return true end
+	local tenant = get_by_sid64(room.tenant)
+
+	if not tenant or owner == tenant or room.invitees[owner:SteamID64()] then return true end
+	if room.friendly and tenant.IsFriend and tenant:IsFriend(owner) then return true end
 
 	return false
 end
@@ -60,8 +66,10 @@ local function setup_triggers(place, TRIGGER)
 		local room = Apartments.List[index]
 
 		if not room or not room.tenant then return end
-		if ent.Unrestricted or room.public or ent == room.tenant then return end
-		if room.invitees[ent:SteamID64()] or (room.friendly and room.tenant.IsFriend and room.tenant:IsFriend(ent)) then return end
+		local tenant = get_by_sid64(room.tenant)
+
+		if ent.Unrestricted or room.public or ent == tenant then return end
+		if room.invitees[ent:SteamID64()] or (room.friendly and tenant.IsFriend and tenant:IsFriend(ent)) then return end
 
 		kick_player_out(ent)
 	end
@@ -75,12 +83,10 @@ end
 
 hook.Add("TriggerPreInclude", "apartment_triggers", setup_triggers)
 
--- What has changed?
 local NET_RENT = 0
 local NET_INVITE = 1
 local NET_INFO = 2
 
--- The change itself
 local NET_KICK = 0
 local NET_ADMIT = 1
 local NET_SET_PUBLIC = 2
@@ -91,7 +97,7 @@ local function network_rent_change(ply, room_n, change)
 	net.WriteInt(NET_RENT, 3)
 	net.WriteInt(room_n, 5)
 	net.WriteInt(change, 3)
-	net.WriteEntity(ply)
+	net.WriteString(ply)
 	net.Broadcast()
 end
 
@@ -101,19 +107,16 @@ local function network_info(broadcast, ply)
 		entrances_networkable[entrance:EntIndex()] = room_n
 	end
 
-	local tenants_networkable = {}
-	for tenant, room_n in pairs(Apartments.Tenants) do
-		tenants_networkable[tenant:EntIndex()] = room_n
-	end
+	local tenants_networkable = Apartments.Tenants
 
 	entrances_networkable = util.TableToJSON(entrances_networkable)
-	tenants_networkable = util.TableToJSON(tenants_networkable)
-
 	entrances_networkable = util.Compress(entrances_networkable)
-	tenants_networkable = util.Compress(tenants_networkable)
-
 	local entrances_size = #entrances_networkable
+
+	tenants_networkable = util.TableToJSON(tenants_networkable)
+	tenants_networkable = util.Compress(tenants_networkable)
 	local tenants_size = #tenants_networkable
+
 	net.Start(tag)
 	net.WriteInt(NET_INFO, 3)
 	net.WriteUInt(entrances_size, 16)
@@ -124,7 +127,7 @@ local function network_info(broadcast, ply)
 end
 
 local function is_tampering(sender, room)
-	if not Apartments.Tenants[sender] or room.tenant ~= sender then
+	if not Apartments.Tenants[sender:SteamID64()] or get_by_sid64(room.tenant) ~= sender then
 		log_event("warn", "Sending off", sender, "for tampering!")
 		skid_kick(sender)
 
@@ -136,7 +139,7 @@ local function receive_rent_change(sender, room_n, change)
 	local room = Apartments.List[room_n]
 
 	if change == NET_ADMIT then
-		if Apartments.Tenants[sender] or room.tenant then return end
+		if Apartments.Tenants[sender:SteamID64()] or room.tenant then return end
 		Apartments.SetTenant(room_n, sender)
 
 		return
@@ -284,13 +287,16 @@ end
 timer.Create(tag, 30, 0, check_for_bad_doors)
 
 function Apartments.Evict(ply)
-	if not ply:IsPlayer() then return "Not a player!" end
-	if not Apartments.Tenants[ply] then return "This player isn't renting an apartment!" end
+	local ply_ent = isstring(ply) and get_by_sid64(ply) or ply
+	local ply_sid64 = isstring(ply) and ply or ply:SteamID64()
 
-	local room_number = Apartments.Tenants[ply]
+	if not ply_ent or not ply_ent:IsPlayer() then return "Not a player!" end
+	if not Apartments.Tenants[ply_sid64] then return "This player isn't renting an apartment!" end
+
+	local room_number = Apartments.Tenants[ply_sid64]
 	local room = Apartments.List[room_number]
 
-	Apartments.Tenants[ply] = nil
+	Apartments.Tenants[ply_sid64] = nil
 
 	network_rent_change(room.tenant, room_number, NET_KICK)
 
@@ -299,33 +305,37 @@ function Apartments.Evict(ply)
 	room.public = false
 	room.friendly = false
 
-	ply:ChatPrint("You no longer own " .. room.name .. "!")
-	ply:EmitSound("doors/door1_stop.wav")
-	log_event("info", "Evicted", ply, "from", room.name)
+	ply_ent:ChatPrint("You no longer own " .. room.name .. "!")
+	ply_ent:EmitSound("doors/door1_stop.wav")
+	log_event("info", "Evicted", ply_ent, "from", room.name)
 
 	return true
 end
 
 function Apartments.SetTenant(room_number, ply)
 	if room_number < 1 or room_number > Apartments.NUM_ROOMS then return "Invalid room number!" end
-	if not ply:IsPlayer() then return "Not a player!" end
+
+	local ply_ent = isstring(ply) and get_by_sid64(ply) or ply
+	local ply_sid64 = isstring(ply) and ply or ply:SteamID64()
+
+	if not ply_ent or not ply_ent:IsPlayer() then return "Not a player!" end
 
 	local room = Apartments.List[room_number]
-	room.tenant = ply
+	room.tenant = ply_sid64
 
-	Apartments.Tenants[ply] = room_number
+	Apartments.Tenants[ply_sid64] = room_number
 
-	network_rent_change(ply, room_number, NET_ADMIT)
+	network_rent_change(ply_sid64, room_number, NET_ADMIT)
 
 	for to_kick, _ in pairs(room.trigger:GetPlayers()) do
-		if to_kick.Unrestricted or to_kick == ply then continue end
+		if to_kick.Unrestricted or to_kick == ply_ent then continue end
 
 		kick_player_out(to_kick)
 	end
 
-	ply:ChatPrint("You now own " .. room.name .. "!")
-	ply:EmitSound("doors/handle_pushbar_locked1.wav")
-	log_event("info", "New tenant", ply, room.name)
+	ply_ent:ChatPrint("You now own " .. room.name .. "!")
+	ply_ent:EmitSound("doors/handle_pushbar_locked1.wav")
+	log_event("info", "New tenant", ply_ent, room.name)
 
 	return true
 end
@@ -339,40 +349,52 @@ end
 
 function Apartments.Kick(room_number, ply)
 	if room_number < 1 or room_number > Apartments.NUM_ROOMS then return "Invalid room number!" end
-	if not ply:IsPlayer() then return "Not a player!" end
+
+	local ply_ent = isstring(ply) and get_by_sid64(ply) or ply
+	local ply_sid64 = isstring(ply) and ply or ply:SteamID64()
+
+	if not ply_ent or not ply_ent:IsPlayer() then return "Not a player!" end
 
 	local room = Apartments.List[room_number]
-	if not room.invitees[ply:SteamID64()] then return "This player is not invited!" end
-	room.invitees[ply:SteamID64()] = nil
+	if not room.invitees[ply_sid64] then return "This player is not invited!" end
+	room.invitees[ply_sid64] = nil
 
-	if room.trigger:GetPlayers()[ply] then
-		kick_player_out(ply)
+	if room.trigger:GetPlayers()[ply_ent] then
+		kick_player_out(ply_ent)
 	end
 
-	ply:ChatPrint(room.tenant:Nick() .. " has kicked you out of their apartment!")
-	log_event("info", room.tenant, "revoked invite to", room.name, "for", ply)
+	local tenant = get_by_sid64(room.tenant)
+
+	ply:ChatPrint(tenant:Nick() .. " has kicked you out of their apartment!")
+	log_event("info", tenant, "revoked invite to", room.name, "for", ply)
 
 	return true
 end
 
 function Apartments.Invite(room_number, ply)
 	if room_number < 1 or room_number > Apartments.NUM_ROOMS then return "Invalid room number!" end
-	if not ply:IsPlayer() then return "Not a player!" end
+
+	local ply_ent = isstring(ply) and get_by_sid64(ply) or ply
+	local ply_sid64 = isstring(ply) and ply or ply:SteamID64()
+
+	if not ply_ent or not ply_ent:IsPlayer() then return "Not a player!" end
 
 	local room = Apartments.List[room_number]
 
-	if room.invitees[ply:SteamID64()] then return end
-	room.invitees[ply:SteamID64()] = true
+	if room.invitees[ply_sid64] then return end
+	room.invitees[ply_sid64] = true
 
-	ply:ChatPrint(room.tenant:Nick() .. " has invited you to their apartment!")
+	local tenant = get_by_sid64(room.tenant)
+
+	ply:ChatPrint(tenant:Nick() .. " has invited you to their apartment!")
 	ply:EmitSound("vo/Streetwar/Alyx_gate/al_hey.wav")
-	log_event("info", room.tenant, "invited", ply, "to", room.name)
+	log_event("info", tenant, "invited", ply, "to", room.name)
 
 	return true
 end
 
 hook.Add("PlayerDisconnected", tag, function(ply)
-	if not Apartments.Tenants[ply] then return end
+	if not Apartments.Tenants[ply:SteamID64()] then return end
 	Apartments.Evict(ply)
 end)
 
@@ -388,13 +410,15 @@ hook.Add("PlayerUse", tag, function(ply, ent)
 	if not room_n then return end
 
 	local room = Apartments.List[room_n]
-	if room.tenant and not ply.Unrestricted and not room.public and room.tenant ~= ply
-	and not room.invitees[ply:SteamID64()] and not (room.friendly and ply.IsFriend and room.tenant:IsFriend(ply)) then
+	local tenant = get_by_sid64(room.tenant)
+
+	if room.tenant and not ply.Unrestricted and not room.public and tenant ~= ply
+	and not room.invitees[ply:SteamID64()] and not (room.friendly and ply.IsFriend and tenant:IsFriend(ply)) then
 		if not last_knocked[ply] then last_knocked[ply] = CurTime() - 20 end
 		if last_knocked[ply] + 20 > CurTime() then return false end
 		last_knocked[ply] = CurTime()
 
-		room.tenant:ChatPrint(ply:Nick() .. " is at your apartment door!")
+		tenant:ChatPrint(ply:Nick() .. " is at your apartment door!")
 		knock_on_entrance(ent)
 
 		return false
