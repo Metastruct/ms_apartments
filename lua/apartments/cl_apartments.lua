@@ -403,7 +403,7 @@ local function draw_door_sign(room_n, tenant_sid64)
 	end
 
 	local tenant_name = get_by_sid64(tenant_sid64)
-	tenant_name = tenant_name and tenant_name:Nick() or "DISCONNECTED"
+	tenant_name = not tenant_name and "DISCONNECTED" or tenant_name:Nick()
 
 	draw.SimpleText(tenant_name, "apartments_name", owner_x, owner_y, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end
