@@ -371,7 +371,7 @@ local function rent_ui(room_n)
 	frame:MakePopup()
 end
 
-local function draw_door_sign(room_n, tenant)
+local function draw_door_sign(room_n, tenant_sid64)
 	local sign_x, sign_y = 80, -370
 	local sign_w, sign_h = 300, 100
 	local room_n_x, room_n_y = 372, -355
@@ -380,7 +380,7 @@ local function draw_door_sign(room_n, tenant)
 	draw.RoundedBox(15, sign_x, sign_y, sign_w, sign_h, color_dark)
 	draw.SimpleText("Apartment " .. room_n, "apartments_sub", room_n_x, room_n_y, color_purple, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
-	if not tenant then
+	if not tenant_sid64 then
 		for i = 1, 3 do
 			local r, g, b, a = 70 + 15 * i, 200 + 10 * i, 70 + 20 * i, 150
 			surface.SetDrawColor(r, g, b, a)
@@ -402,7 +402,7 @@ local function draw_door_sign(room_n, tenant)
 		surface.DrawPoly(logo[i])
 	end
 
-	local tenant_name = get_by_sid64(room.tenant)
+	local tenant_name = get_by_sid64(tenant_sid64)
 	tenant_name = tenant_name and tenant_name:Nick() or "DISCONNECTED"
 
 	draw.SimpleText(tenant_name, "apartments_name", owner_x, owner_y, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
