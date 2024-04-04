@@ -293,7 +293,7 @@ end
 timer.Create(tag, 30, 0, check_for_bad_doors)
 
 function Apartments.Evict(ply)
-	local ply_ent = isstring(ply) and get_by_sid64(ply) or ply
+	local ply_ent = not isstring(ply) and ply or get_by_sid64(ply)
 	local ply_sid64 = isstring(ply) and ply or ply:SteamID64()
 
 	if not Apartments.Tenants[ply_sid64] then return "This player isn't renting an apartment!" end
@@ -432,17 +432,17 @@ hook.Add("PlayerUse", tag, function(ply, ent)
 	if not room_n then return end
 
 	local room = Apartments.List[room_n]
+	if not room.tenant then return end
+
 	local tenant = get_by_sid64(room.tenant)
+	if tenant == ply or ply.Unrestricted or room.public or room.invitees[ply:SteamID64()] then return end
 
-	if room.tenant and not ply.Unrestricted and not room.public and tenant ~= ply
-	and not room.invitees[ply:SteamID64()] and not (room.friendly and ply.IsFriend and tenant:IsFriend(ply)) then
-		if not last_knocked[ply] then last_knocked[ply] = CurTime() - 20 end
-		if last_knocked[ply] + 20 > CurTime() then return false end
-		last_knocked[ply] = CurTime()
+	if not last_knocked[ply] then last_knocked[ply] = CurTime() - 20 end
+	if last_knocked[ply] + 20 > CurTime() then return false end
+	last_knocked[ply] = CurTime()
 
-		tenant:ChatPrint(ply:Nick() .. " is at your apartment door!")
-		knock_on_entrance(ent)
+	if tenant then tenant:ChatPrint(ply:Nick() .. " is at your apartment door!") end
+	knock_on_entrance(ent)
 
-		return false
-	end
+	return false
 end)
