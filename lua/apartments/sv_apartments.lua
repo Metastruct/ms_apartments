@@ -105,7 +105,10 @@ local function network_info(broadcast, ply)
 		entrances_networkable[entrance:EntIndex()] = room_n
 	end
 
-	local tenants_networkable = Apartments.Tenants
+	local tenants_networkable = {}
+	for sid64, room_n in pairs(Apartments.Tenants) do
+		tenants_networkable["d" .. sid64] = room_n
+	end
 
 	entrances_networkable = util.TableToJSON(entrances_networkable)
 	entrances_networkable = util.Compress(entrances_networkable)
