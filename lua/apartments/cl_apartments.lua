@@ -111,8 +111,9 @@ local function receive_info(networked_entrances, networked_tenants)
 	end
 
 	Apartments.Entrances = entrances
-	for tenant_sid64, room_n in pairs(networked_tenants) do
-		receive_rent_change(tostring(tenant_sid64), room_n, NET_ADMIT)
+	for sid64_number, room_n in pairs(networked_tenants) do
+		local tenant_sid64 = ("%d"):format(sid64_number)
+		receive_rent_change(tenant_sid64, room_n, NET_ADMIT)
 	end
 end
 
