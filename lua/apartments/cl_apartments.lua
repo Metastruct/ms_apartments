@@ -264,9 +264,9 @@ end
 local function rent_ui(room_n)
 	local room = Apartments.List[room_n]
 
-	local tenant = get_by_sid64(room.tenant)
+	local tenant = room.tenant
 	local am_renting = Apartments.Tenants[LocalPlayer():SteamID64()]
-	local rented_by_me = tenant == LocalPlayer()
+	local rented_by_me = get_by_sid64(tenant) == LocalPlayer()
 
 	local frame_w, frame_h = 200, 150
 	local frame, rent_btn, invite_btn, public_btn, color_btn
@@ -402,7 +402,7 @@ local function draw_door_sign(room_n, tenant)
 		surface.DrawPoly(logo[i])
 	end
 
-	draw.SimpleText(tenant:Nick(), "apartments_name", owner_x, owner_y, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	draw.SimpleText(tenant and tenant:Nick() or "DISCONNECTED", "apartments_name", owner_x, owner_y, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end
 
 local function PostDrawOpaqueRenderables_Doors()

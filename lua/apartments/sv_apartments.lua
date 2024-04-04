@@ -268,6 +268,14 @@ end
 hook.Add("PostSpawnLuaTriggers", tag, post_cleanup)
 hook.Add("PlayerFullyConnected", tag, function(ply)
 	network_info(false, ply)
+
+	local room_number = Apartments.Tenants[ply:SteamID64()]
+	if not room_number then return end
+
+	local room = Apartments.List[room_number]
+	room.grace = nil
+
+	log_event("info", room.name, "restored from grace")
 end)
 
 local function check_for_bad_doors()
@@ -288,7 +296,6 @@ function Apartments.Evict(ply)
 	local ply_ent = isstring(ply) and get_by_sid64(ply) or ply
 	local ply_sid64 = isstring(ply) and ply or ply:SteamID64()
 
-	if not ply_ent or not ply_ent:IsPlayer() then return "Not a player!" end
 	if not Apartments.Tenants[ply_sid64] then return "This player isn't renting an apartment!" end
 
 	local room_number = Apartments.Tenants[ply_sid64]
@@ -303,9 +310,12 @@ function Apartments.Evict(ply)
 	room.public = false
 	room.friendly = false
 
-	ply_ent:ChatPrint("You no longer own " .. room.name .. "!")
-	ply_ent:EmitSound("doors/door1_stop.wav")
-	log_event("info", "Evicted", ply_ent, "from", room.name)
+	if ply_ent then
+		ply_ent:ChatPrint("You no longer own " .. room.name .. "!")
+		ply_ent:EmitSound("doors/door1_stop.wav")
+	end
+
+	log_event("info", "Evicted", ply_ent or ply_sid64, "from", room.name, ply_ent and "" or "(grace expired)")
 
 	return true
 end
@@ -392,8 +402,22 @@ function Apartments.Invite(room_number, ply)
 end
 
 hook.Add("PlayerDisconnected", tag, function(ply)
-	if not Apartments.Tenants[ply:SteamID64()] then return end
-	Apartments.Evict(ply)
+	local ply_sid64 = ply:SteamID64()
+	local room_number = Apartments.Tenants[ply_sid64]
+
+	if not room_number then return end
+
+	local room = Apartments.List[room_number]
+	room.grace = true
+
+	log_event("info", room.name, "entering grace for 3 minutes")
+
+	timer.Simple(60 * 3, function()
+		if not room.grace then return end
+
+		Apartments.Evict(ply_sid64)
+		room.grace = nil
+	end)
 end)
 
 local last_knocked = {}
