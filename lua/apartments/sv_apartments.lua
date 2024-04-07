@@ -62,6 +62,7 @@ local function setup_triggers(place, TRIGGER)
 
 		local index = tonumber(self.place:match"%d%d")
 		local room = Apartments.List[index]
+		hook.Run("ApartmentEnter",ent,self,room)
 
 		if not room or not room.tenant then return end
 		local tenant = get_by_sid64(room.tenant)
@@ -72,8 +73,13 @@ local function setup_triggers(place, TRIGGER)
 		kick_player_out(ent)
 	end
 
-	function TRIGGER:Out()
-
+	function TRIGGER:Out(ent,is_player)
+		if not is_player then return end
+		
+		local index = tonumber(self.place:match"%d%d")
+		local room = Apartments.List[index]
+		hook.Run("ApartmentLeave",ent,self,room)
+		
 	end
 
 	return true -- overrides any includes, suppress missing logic warnings
