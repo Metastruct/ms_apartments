@@ -32,8 +32,8 @@ local function should_entity_be_in_trigger(ent, trigger)
 
 	local tenant = get_by_sid64(room.tenant)
 
-	if not tenant or owner == tenant or room.invitees[owner:SteamID64()] then return true end
-	if room.friendly and tenant.IsFriend and tenant:IsFriend(owner) then return true end
+	if not room.tenant or owner == tenant or room.invitees[owner:SteamID64()] then return true end
+	if room.friendly and tenant and tenant.IsFriend and tenant:IsFriend(owner) then return true end
 
 	return false
 end
@@ -62,7 +62,7 @@ local function setup_triggers(place, TRIGGER)
 
 		local index = tonumber(self.place:match"%d%d")
 		local room = Apartments.List[index]
-		hook.Run("ApartmentEnter",ent,self,room)
+		hook.Run("ApartmentEnter", ent, self, room)
 
 		if not room or not room.tenant then return end
 		local tenant = get_by_sid64(room.tenant)
@@ -75,11 +75,10 @@ local function setup_triggers(place, TRIGGER)
 
 	function TRIGGER:Out(ent,is_player)
 		if not is_player then return end
-		
+
 		local index = tonumber(self.place:match"%d%d")
 		local room = Apartments.List[index]
-		hook.Run("ApartmentLeave",ent,self,room)
-		
+		hook.Run("ApartmentLeave", ent, self, room)
 	end
 
 	return true -- overrides any includes, suppress missing logic warnings
