@@ -249,12 +249,13 @@ local function get_entrance(trigger_pos, room_n)
 	return doors[1][1]
 end
 
-local function post_cleanup(force)
-	for room_n = 1, Apartments.NUM_ROOMS do
-		local entry = Apartments.List[room_n]
+local function post_cleanup()
+	Apartments.Entrances = {}
+	Apartments.Triggers = {}
 
-		if not entry then continue end
-		if not force and entry.trigger ~= NULL and entry.entrance ~= NULL then continue end
+	for room_n = 1, Apartments.NUM_ROOMS do
+		local room = Apartments.List[room_n]
+		if not room then continue end
 
 		local as_two_digits = string.format("%02d", room_n)
 
@@ -263,8 +264,8 @@ local function post_cleanup(force)
 
 		local entrance = get_entrance(trigger:GetPos(), room_n)
 
-		entry.trigger = trigger
-		entry.entrance = entrance
+		room.trigger = trigger
+		room.entrance = entrance
 
 		Apartments.Entrances[entrance] = room_n
 		Apartments.Triggers[trigger] = room_n
@@ -273,7 +274,7 @@ local function post_cleanup(force)
 	network_info(true)
 end
 
-hook.Add("PostSpawnLuaTriggers", tag, post_cleanup)
+hook.Add("PostCleanupMap", tag, post_cleanup)
 hook.Add("PlayerFullyConnected", tag, function(ply)
 	network_info(false, ply)
 
@@ -292,10 +293,7 @@ local function check_for_bad_doors()
 		if not IsValid(ent) then found_bad = true continue end
 	end
 
-	if not found_bad then return end
-
-	Apartments.Entrances = {}
-	post_cleanup(true)
+	if found_bad then post_cleanup() end
 end
 
 timer.Create(tag, 30, 0, check_for_bad_doors)
