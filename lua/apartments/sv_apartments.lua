@@ -68,7 +68,7 @@ local function setup_triggers(place, TRIGGER)
 		local tenant = get_by_sid64(room.tenant)
 
 		if ent.Unrestricted or room.public or ent == tenant then return end
-		if room.invitees[ent:SteamID64()] or (room.friendly and tenant.IsFriend and tenant:IsFriend(ent)) then return end
+		if room.invitees[ent:SteamID64()] or (room.friendly and tenant and tenant.IsFriend and tenant:IsFriend(ent)) then return end
 
 		kick_player_out(ent)
 	end
