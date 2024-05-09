@@ -441,7 +441,7 @@ hook.Add("PlayerUse", tag, function(ply, ent)
 	if not room.tenant then return end
 
 	local tenant = get_by_sid64(room.tenant)
-	if tenant == ply or ply.Unrestricted or room.public or room.invitees[ply:SteamID64()] then return end
+	if tenant == ply or ply.Unrestricted or room.public or room.invitees[ply:SteamID64()] or (room.friendly and tenant and tenant.IsFriend and tenant:IsFriend(ply)) then return end
 
 	if not last_knocked[ply] then last_knocked[ply] = CurTime() - 20 end
 	if last_knocked[ply] + 20 > CurTime() then return false end
