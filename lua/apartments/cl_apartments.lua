@@ -94,6 +94,7 @@ local function receive_rent_change(ply_sid64, room_n, change)
 		local room = Apartments.List[room_n]
 		room.tenant = nil
 		room.public = false
+		room.friendly = false
 		room.invitees = {}
 	end
 end
