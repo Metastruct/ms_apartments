@@ -18,6 +18,7 @@ if SERVER then
 	util.AddNetworkString(tag)
 
 	AddCSLuaFile("apartments/cl_apartments.lua")
+	AddCSLuaFile("apartments/sh_privacy.lua")
 	AddCSLuaFile("apartments/cl_skybox.lua")
 
 	include("apartments/sv_apartments.lua")
@@ -27,6 +28,8 @@ if CLIENT then
 	include("apartments/cl_apartments.lua")
 	include("apartments/cl_skybox.lua")
 end
+
+include("apartments/sh_privacy.lua")
 
 -- room list setup
 if SERVER then
