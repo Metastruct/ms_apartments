@@ -3,19 +3,40 @@ module("ms", package.seeall)
 local Tag = "apartments_privacy"
 local NetTag = "apartment"
 
+local META = FindMetaTable("Player")
+
 if SERVER then
     _M.Apartments.Entered = _M.Apartments.Entered or {}
     local apartments_entered = ms.Apartments.Entered
 
-    local function GetApartment(ply)
-        local length = apartments_entered[ply] and #apartments_entered[ply]
-        return length and length > 0 and apartments_entered[ply][length] or nil
+    function META:GetApartment()
+        local length = apartments_entered[self] and #apartments_entered[self]
+        return length and length > 0 and apartments_entered[self][length] or nil
+    end
+else
+    function META:GetApartment()
+        return self:GetNetData(NetTag)
+    end
+end
+
+local function CanHear(speaker, listener)
+    local speaker_apartment, listener_apartment = speaker:GetApartment(), listener:GetApartment()
+    if speaker_apartment == listener_apartment then
+        return true
     end
 
-    local function CanHear(speaker, listener)
-        return GetApartment(speaker) == GetApartment(listener)
-    end
+    -- Allow to hear through open entrance
+    local door = speaker_apartment and ms.Apartments.List[speaker_apartment].entrance
+        or listener_apartment and ms.Apartments.List[listener_apartment].entrance
+    if IsValid(door)
+        and door:GetInternalVariable("m_eDoorState") ~= 0
+        and door:GetPos():Distance(speaker:GetPos()) < 512
+    then
+        return true
+    end 
+end
 
+if SERVER then
     hook.Add("ApartmentEnter", Tag, function(ply, trigger, room)
         if not ply:IsPlayer() then return end
         local index = tonumber(trigger.place:match("%d%d"))
@@ -39,19 +60,19 @@ if SERVER then
     end)
 
     hook.Add("PlayerCanSeePlayersChat", Tag, function(_, _, listener, speaker, is_local)
-        if is_local and not CanHear(listener, speaker) then
+        if is_local and not CanHear(speaker, listener) then
             return false
         end
     end)
 
     hook.Add("PlayerCanHearPlayersVoice", Tag, function(listener, talker)
-        if not CanHear(listener, talker) then
+        if not CanHear(talker, listener) then
             return false
         end
     end)
 
     hook.Add("ChatsoundsCanPlayerHear", Tag, function(speaker, text, listener, _, is_local)
-        if not CanHear(listener, speaker) then
+        if not CanHear(speaker, listener) then
             return false
         end
     end)
@@ -64,10 +85,6 @@ if SERVER then
         end
     )
 else
-    local function CanHear(speaker, listener)
-        return speaker:GetNetData(NetTag) ~= listener:GetNetData(NetTag)
-    end
-        
     -- TODO, hook Easychat
     -- https://github.com/Earu/EasyChat/blob/master/lua/easychat/modules/client/local_ui.lua
     -- https://github.com/Earu/EasyChat/blob/master/lua/easychat/modules/client/voice_hud.lua
