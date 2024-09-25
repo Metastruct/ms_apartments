@@ -55,6 +55,7 @@ end
 local NET_RENT = 0
 local NET_INVITE = 1
 local NET_INFO = 2
+local NET_SYNC = 3
 
 local NET_KICK = 0
 local NET_ADMIT = 1
@@ -117,6 +118,14 @@ local function receive_info(networked_entrances, networked_tenants)
 	end
 end
 
+local function sync_room_state(room_n, public, friendly, invitees)
+	local room = Apartments.List[room_n]
+	if not room then return end
+	room.public = public
+	room.friendly = friendly
+	room.invitees = invitees
+end
+
 net.Receive(tag, function()
 	local net_type = net.ReadInt(3)
 
@@ -132,6 +141,23 @@ net.Receive(tag, function()
 	end
 
 	local room_n = net.ReadInt(5)
+	
+	if net_type == NET_SYNC then
+		local public = net.ReadBool()
+		local friendly = net.ReadBool()
+		local invitees_size = net.ReadUInt(16)
+		local invitees_networkable = net.ReadData(invitees_size)
+		local invitees_set = util.JSONToTable(invitees_networkable)
+		local invitees = {}
+		for _, sid64 in ipairs(invitees_set) do
+			invitees[sid64:sub(2)] = true
+		end
+
+		sync_room_state(room_n, public, friendly, invitees)
+
+		return
+	end
+	
 	local change = net.ReadInt(3)
 
 	local ply_sid64 = net.ReadString()

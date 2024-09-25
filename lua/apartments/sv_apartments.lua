@@ -89,6 +89,7 @@ hook.Add("TriggerPreInclude", "apartment_triggers", setup_triggers)
 local NET_RENT = 0
 local NET_INVITE = 1
 local NET_INFO = 2
+local NET_SYNC = 3
 
 local NET_KICK = 0
 local NET_ADMIT = 1
@@ -275,11 +276,35 @@ local function post_cleanup()
 end
 
 hook.Add("PostCleanupMap", tag, post_cleanup)
+
+local function sync_room_state(ply, room_n)
+	local room = Apartments.List[room_n]
+	if not room then return end
+
+	local invitees_networkable = {}
+	for sid64, _ in next, room.invitees do
+		table.insert(invitees_networkable, "d" .. sid64)
+	end
+	invitees_networkable = util.TableToJSON(invitees_networkable)
+	local invitees_size = #invitees_networkable
+
+	net.Start(tag)
+	net.WriteInt(NET_SYNC, 3)
+	net.WriteInt(room_n, 5)
+	net.WriteBool(room.public)
+	net.WriteBool(room.friendly)
+	net.WriteUInt(invitees_size, 16)
+	net.WriteData(invitees_networkable, invitees_size)
+	net.Send(ply)
+end
+
 hook.Add("PlayerFullyConnected", tag, function(ply)
 	network_info(false, ply)
 
 	local room_number = Apartments.Tenants[ply:SteamID64()]
 	if not room_number then return end
+
+	sync_room_state(ply, room_number)
 
 	local room = Apartments.List[room_number]
 	room.grace = nil
