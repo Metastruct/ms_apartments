@@ -13,7 +13,10 @@ MetAchievements.RegisterAchievement(id, {
 hook.Add("ApartmentEnter", ("%s_%s"):format(tag, id), function(ent, trigger, room)
     if not ent:IsPlayer() or MetAchievements.HasAchievement(ent, id) then return end
 
-    if ent == room.tenant then
+    local tenant = player.GetBySteamID64(room.tenant)
+    if not tenant then return end
+
+    if ent == tenant then
         MetAchievements.UnlockAchievement(ent, id)
     end
 end)
