@@ -56,6 +56,7 @@ if SERVER then
             ply:SetNetData(NetTag, entered[#entered])
         else
             ply:SetNetData(NetTag, nil)
+            apartments_entered[ply] = nil
         end
     end)
 
