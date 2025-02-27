@@ -318,7 +318,7 @@ hook.Add("TriggerPreInclude", tag, function(place, TRIGGER)
     end
 
     function TRIGGER:In(ent, is_player)
-        local room = rooms[self.place:match("%d%d")]
+        local room = rooms[tonumber(self.place:match("%d%d"))]
 
         if not is_player and should_entity_be_in_room(ent, room) then
             if ent.Dissolve then ent:Dissolve() end

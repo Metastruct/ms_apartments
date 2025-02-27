@@ -78,7 +78,11 @@ local function apartment_ui(room_number)
     rent_lb:DockMargin(2, 7, 0, 0)
 
     local rent_btn = rent_panel:Add("DButton")
-    rent_btn:SetEnabled(not tenant or tenant == LocalPlayer())
+    if is_client_renting and tenant ~= LocalPlayer() then
+        rent_btn:SetEnabled(false)
+    else
+        rent_btn:SetEnabled(true)
+    end
     rent_btn:SetText(tenant == LocalPlayer() and "Abandon Room" or "Rent Room")
     rent_btn:SetHeight(50)
     rent_btn:Dock(BOTTOM)
@@ -93,7 +97,7 @@ local function apartment_ui(room_number)
         root:Close()
     end
 
-    if not is_client_renting then return end
+    if not is_client_renting or tenant ~= LocalPlayer():SteamID64() then return end
 
     local invite_panel = property_sheet:Add("DPanel")
     property_sheet:AddSheet("Invitations", invite_panel, "icon16/group.png")
