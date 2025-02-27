@@ -97,7 +97,7 @@ local function apartment_ui(room_number)
         root:Close()
     end
 
-    if not is_client_renting or tenant ~= LocalPlayer():SteamID64() then return end
+    if not is_client_renting or is_client_renting ~= room_number then return end
 
     local invite_panel = property_sheet:Add("DPanel")
     property_sheet:AddSheet("Invitations", invite_panel, "icon16/group.png")
@@ -197,9 +197,9 @@ net.Receive(tag, function()
         rooms = util.JSONToTable(util.Decompress(net.ReadData(payload_size)))
 
         is_client_renting = false
-        for _, room in pairs(rooms) do
+        for room_number, room in pairs(rooms) do
             if room.tenant == LocalPlayer():SteamID64() then
-                is_client_renting = true
+                is_client_renting = room_number
             end
         end
     end

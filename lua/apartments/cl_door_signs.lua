@@ -90,7 +90,7 @@ local function PostDrawOpaqueRenderables_Doors()
 
 	for entrance_entindex, room_n in pairs(entrances) do
 		local entrance = Entity(entrance_entindex)
-		if entrance == null then entrances[entrance] = nil continue end
+		if not IsValid(entrance) then entrances[entrance] = nil continue end
 		if ep:DistToSqr(entrance:GetPos()) > 400 ^ 2 then continue end
 
 		local room = rooms[room_n]
