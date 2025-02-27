@@ -60,7 +60,7 @@ local function is_valid_client_request(ply, id, room_number, state)
         return false
     end
 
-    if room.tenant ~= ply:SteamID64() then
+    if room.tenant and room.tenant ~= ply:SteamID64() then
         return false
     end
 
