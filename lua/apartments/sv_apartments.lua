@@ -129,6 +129,8 @@ local function should_player_be_in_room(ply, room)
         if room.passage == PASSAGE_FRIENDS and tenant.IsFriend and tenant:IsFriend(ply) then
             return true
         end
+    else
+        return true
     end
 
     return false
@@ -240,17 +242,23 @@ function Apartments.SetPassage(room_number, state)
             if ply == tenant then continue end
 
             if state == PASSAGE_FRIENDS and tenant.IsFriend and not tenant:IsFriend(ply) then
-                guesply:SetPos(landmark.get("apartments") or Vector())
+                ply:SetPos(landmark.get("apartments") or Vector())
             end
 
             if state == PASSAGE_GUESTS and not room.guests[ply:UserID()] then
-                gueplyt:SetPos(landmark.get("apartments") or Vector())
+                ply:SetPos(landmark.get("apartments") or Vector())
             end
         end
     end
 
     net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
     log_event("info", "passage set to", state, "for", room.name)
+end
+
+function Apartments.GetPassage(room_number)
+    if not is_valid_room(room_number) then return end
+
+    return rooms[room_number].passage
 end
 
 net.Receive(tag, function(_, ply)
