@@ -146,6 +146,10 @@ function Apartments.GetEntrances()
     return entrances
 end
 
+function Apartments.GetTriggers()
+    return triggers
+end
+
 function Apartments.SetTenant(room_number, tenant)
     if not is_valid_room(room_number) or not tenant:IsPlayer() then return end
 
@@ -224,6 +228,31 @@ function Apartments.GetInvited(room_number, guest)
     return rooms[room_number].guests[guest:UserID()]
 end
 
+function Apartments.SetPassage(room_number, state)
+    if not is_valid_room(room_number) then return end
+
+    local room = rooms[room_number]
+    room.passage = state
+
+    if state < PASSAGE_ALL then
+        local tenant = player.GetBySteamID64(room.tenant)
+        for _, ply in room.trigger:GetPlayers() do
+            if ply == tenant then continue end
+
+            if state == PASSAGE_FRIENDS and tenant.IsFriend and not tenant:IsFriend(ply) then
+                guesply:SetPos(landmark.get("apartments") or Vector())
+            end
+
+            if state == PASSAGE_GUESTS and not room.guests[ply:UserID()] then
+                gueplyt:SetPos(landmark.get("apartments") or Vector())
+            end
+        end
+    end
+
+    net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
+    log_event("info", "passage set to", state, "for", room.name)
+end
+
 net.Receive(tag, function(_, ply)
     local id = net.ReadUInt(32)
     local room_number = net.ReadUInt(32)
@@ -258,8 +287,7 @@ net.Receive(tag, function(_, ply)
     end
 
     if id == CL_NET_PASSAGE then
-        rooms[room_number].passage = state
-        net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
+        Apartments.SetPassage(room_number, state)
     end
 end)
 

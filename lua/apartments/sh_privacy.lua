@@ -26,8 +26,8 @@ local function CanHear(speaker, listener)
     end
 
     -- Allow to hear through open entrance
-    local door = speaker_apartment and ms.Apartments.List[speaker_apartment].entrance
-        or listener_apartment and ms.Apartments.List[listener_apartment].entrance
+    local door = speaker_apartment and Apartments.GetRooms()[speaker_apartment].entrance
+        or listener_apartment and Apartments.GetRooms()[listener_apartment].entrance
     if IsValid(door)
         and door:GetInternalVariable("m_eDoorState") ~= 0
         and door:GetPos():Distance(speaker:GetPos()) < 512
