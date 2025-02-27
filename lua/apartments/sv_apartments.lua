@@ -54,9 +54,13 @@ local function is_valid_client_request(ply, id, room_number, state)
 
     if id == CL_NET_RENT and state == 1 and tenants[ply:SteamID64()] then
         return false
-    elseif not room.tenant then
+    end
+
+    if id ~= CL_NET_RENT and not room.tenant then
         return false
-    elseif room.tenant ~= ply:SteamID64() then
+    end
+
+    if room.tenant ~= ply:SteamID64() then
         return false
     end
 

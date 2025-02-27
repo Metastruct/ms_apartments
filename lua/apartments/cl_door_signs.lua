@@ -87,7 +87,8 @@ local function PostDrawOpaqueRenderables_Doors()
 	local ep = LocalPlayer():EyePos()
 	local entrances = Apartments.GetEntrances()
 
-	for entrance, room_n in pairs(entrances) do
+	for entrance_entindex, room_n in pairs(entrances) do
+		local entrance = Entity(entrance_entindex)
 		if entrance == null then entrances[entrance] = nil continue end
 		if ep:DistToSqr(entrance:GetPos()) > 400 ^ 2 then continue end
 
