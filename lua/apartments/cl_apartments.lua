@@ -160,11 +160,11 @@ local function apartment_ui(room_number)
     who_can_enter:AddChoice("Guests only", PASSAGE_GUESTS)
     who_can_enter:AddChoice("Guests and Friends", PASSAGE_FRIENDS)
     who_can_enter:AddChoice("Everyone", PASSAGE_ALL)
-
     who_can_enter:Dock(TOP)
     who_can_enter:DockMargin(0, 7, 0, 0)
 
     local who_can_enter_btn = invite_panel:Add("DButton")
+    who_can_enter_btn:SetEnabled(false)
     who_can_enter_btn:SetText("Confirm")
     who_can_enter_btn:Dock(TOP)
     who_can_enter_btn:DockMargin(0, 7, 0, 0)
@@ -178,6 +178,10 @@ local function apartment_ui(room_number)
         local _, new_state = who_can_enter:GetSelected()
         request_action_from_server(CL_NET_PASSAGE, room_number, new_state)
         root:Close()
+    end
+
+    function who_can_enter:OnSelect()
+        who_can_enter_btn:SetEnabled(true)
     end
 end
 

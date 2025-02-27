@@ -238,7 +238,7 @@ function Apartments.SetPassage(room_number, state)
 
     if state < PASSAGE_ALL then
         local tenant = player.GetBySteamID64(room.tenant)
-        for _, ply in room.trigger:GetPlayers() do
+        for _, ply in pairs(room.trigger:GetPlayers()) do
             if ply == tenant then continue end
 
             if state == PASSAGE_FRIENDS and tenant.IsFriend and not tenant:IsFriend(ply) then
