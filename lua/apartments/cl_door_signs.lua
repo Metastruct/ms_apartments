@@ -77,7 +77,7 @@ local function draw_door_sign(room_n, tenant_sid64)
 		surface.DrawPoly(logo[i])
 	end
 
-	local tenant_name = get_by_sid64(tenant_sid64)
+	local tenant_name = player.GetBySteamID64(tenant_sid64)
 	tenant_name = tenant_name and tenant_name:Nick() or "DISCONNECTED"
 
 	draw.SimpleText(tenant_name, "apartments_name", owner_x, owner_y, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)

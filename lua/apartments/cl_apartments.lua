@@ -90,6 +90,7 @@ local function apartment_ui(room_number)
 
     function rent_btn:DoClick()
         request_action_from_server(CL_NET_RENT, room_number, is_client_renting and 0 or 1)
+        root:Close()
     end
 
     if not is_client_renting then return end
@@ -132,6 +133,7 @@ local function apartment_ui(room_number)
         local _, ply = invite_list:GetSelected()
         local ply_uid = ply:UserID()
         request_action_from_server(CL_NET_INVITE, room_number, room.guests[ply_uid] and 0 or 1, ply_uid)
+        root:Close()
     end
 
     function invite_list:OnSelect()
@@ -171,6 +173,7 @@ local function apartment_ui(room_number)
     function who_can_enter_btn:DoClick()
         local _, new_state = who_can_enter:GetSelected()
         request_action_from_server(CL_NET_PASSAGE, room_number, new_state)
+        root:Close()
     end
 end
 
