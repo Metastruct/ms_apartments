@@ -12,6 +12,8 @@ local tenants = {}
 local triggers = {}
 local entrances = {}
 
+local entrance_last_knocked = {}
+
 local PASSAGE_GUESTS = 1
 local PASSAGE_FRIENDS = 2
 local PASSAGE_ALL = 3
@@ -41,16 +43,16 @@ local function net_broadcast_table(id, tbl)
     net.Broadcast()
 end
 
-local function is_valid_room(room_number)
-    if not room_number or not rooms[room_number] then
+local function is_valid_room(room_numberumber)
+    if not room_numberumber or not rooms[room_numberumber] then
         return false
     end
 
     return true
 end
 
-local function is_valid_client_request(ply, id, room_number, state)
-    local room = rooms[room_number]
+local function is_valid_client_request(ply, id, room_numberumber, state)
+    local room = rooms[room_numberumber]
 
     if id == CL_NET_RENT and state == 1 and tenants[ply:SteamID64()] then
         return false
@@ -67,7 +69,7 @@ local function is_valid_client_request(ply, id, room_number, state)
     return true
 end
 
-local function get_room_entrance(trigger_pos, room_n)
+local function get_room_entrance(trigger_pos, room_number)
     local box_bounds = Vector(370, 370, 5)
     local mins, maxs = trigger_pos - box_bounds, trigger_pos + box_bounds
     local near = ents.FindInBox(mins, maxs)
@@ -136,6 +138,12 @@ local function should_player_be_in_room(ply, room)
     return false
 end
 
+local function knock_on_entrance(entrance)
+    for i = 1, 3 do
+        timer.Simple(i * .25, entrance.EmitSound, entrance, "physics/wood/wood_box_impact_soft1.wav", 80)
+    end
+end
+
 function Apartments.GetRooms()
     return rooms
 end
@@ -152,11 +160,11 @@ function Apartments.GetTriggers()
     return triggers
 end
 
-function Apartments.SetTenant(room_number, tenant)
-    if not is_valid_room(room_number) or not tenant:IsPlayer() then return end
+function Apartments.SetTenant(room_numberumber, tenant)
+    if not is_valid_room(room_numberumber) or not tenant:IsPlayer() then return end
 
-    local room = rooms[room_number]
-    tenants[tenant:SteamID64()] = room_number
+    local room = rooms[room_numberumber]
+    tenants[tenant:SteamID64()] = room_numberumber
     room.tenant = tenant:SteamID64()
     room.passage = PASSAGE_GUESTS
     room.guests = {}
@@ -185,16 +193,16 @@ function Apartments.EvictTenant(tenant)
     log_event("info", tenant.Nick and tenant:Nick() or tenant, "evicted from", room.name)
 end
 
-function Apartments.GetTenant(room_number)
-    if not is_valid_room(room_number) then return end
+function Apartments.GetTenant(room_numberumber)
+    if not is_valid_room(room_numberumber) then return end
 
-    return rooms[room_number].tenant
+    return rooms[room_numberumber].tenant
 end
 
-function Apartments.Invite(room_number, guest)
-    if not is_valid_room(room_number) or not guest:IsPlayer() then return end
+function Apartments.Invite(room_numberumber, guest)
+    if not is_valid_room(room_numberumber) or not guest:IsPlayer() then return end
 
-    local room = rooms[room_number]
+    local room = rooms[room_numberumber]
     -- either tabletojson or compress turns these keys into numbers, sid64 is too big
     room.guests[guest:UserID()] = true
 
@@ -202,10 +210,10 @@ function Apartments.Invite(room_number, guest)
     log_event("info", guest:Nick(), "invited to", room.name)
 end
 
-function Apartments.RevokeInvitation(room_number, guest)
-    if not is_valid_room(room_number) or not guest:IsPlayer() then return end
+function Apartments.RevokeInvitation(room_numberumber, guest)
+    if not is_valid_room(room_numberumber) or not guest:IsPlayer() then return end
 
-    local room = rooms[room_number]
+    local room = rooms[room_numberumber]
     local guest_uid = guest:UserID()
 
     if room.guests[guest_uid] then
@@ -220,20 +228,20 @@ function Apartments.RevokeInvitation(room_number, guest)
     end
 end
 
-function Apartments.GetInvited(room_number, guest)
-    if not is_valid_room(room_number) or guest and not guest:IsPlayer() then return end
+function Apartments.GetInvited(room_numberumber, guest)
+    if not is_valid_room(room_numberumber) or guest and not guest:IsPlayer() then return end
 
     if not guest then
-        return rooms[room_number].guests
+        return rooms[room_numberumber].guests
     end
 
-    return rooms[room_number].guests[guest:UserID()]
+    return rooms[room_numberumber].guests[guest:UserID()]
 end
 
-function Apartments.SetPassage(room_number, state)
-    if not is_valid_room(room_number) then return end
+function Apartments.SetPassage(room_numberumber, state)
+    if not is_valid_room(room_numberumber) then return end
 
-    local room = rooms[room_number]
+    local room = rooms[room_numberumber]
     room.passage = state
 
     if state < PASSAGE_ALL then
@@ -255,18 +263,18 @@ function Apartments.SetPassage(room_number, state)
     log_event("info", "passage set to", state, "for", room.name)
 end
 
-function Apartments.GetPassage(room_number)
-    if not is_valid_room(room_number) then return end
+function Apartments.GetPassage(room_numberumber)
+    if not is_valid_room(room_numberumber) then return end
 
-    return rooms[room_number].passage
+    return rooms[room_numberumber].passage
 end
 
 net.Receive(tag, function(_, ply)
     local id = net.ReadUInt(32)
-    local room_number = net.ReadUInt(32)
+    local room_numberumber = net.ReadUInt(32)
     local state = net.ReadUInt(32)
 
-    if not is_valid_room(room_number) or not is_valid_client_request(ply, id, room_number, state) then
+    if not is_valid_room(room_numberumber) or not is_valid_client_request(ply, id, room_numberumber, state) then
         log_event("warn", "caught bad request from", ply:Nick())
 
         return
@@ -274,7 +282,7 @@ net.Receive(tag, function(_, ply)
 
     if id == CL_NET_RENT then
         if tobool(state) then
-            Apartments.SetTenant(room_number, ply)
+            Apartments.SetTenant(room_numberumber, ply)
         else
             Apartments.EvictTenant(ply)
         end
@@ -286,16 +294,16 @@ net.Receive(tag, function(_, ply)
         local guest = Player(net.ReadUInt(32))
 
         if tobool(state) then
-            Apartments.Invite(room_number, guest)
+            Apartments.Invite(room_numberumber, guest)
         else
-            Apartments.RevokeInvitation(room_number, guest)
+            Apartments.RevokeInvitation(room_numberumber, guest)
         end
 
         return
     end
 
     if id == CL_NET_PASSAGE then
-        Apartments.SetPassage(room_number, state)
+        Apartments.SetPassage(room_numberumber, state)
     end
 end)
 
@@ -313,9 +321,9 @@ hook.Add("PlayerFullyConnected", tag, function(ply)
 
     net.Send(ply)
 
-    local room_number = tenants[ply:SteamID64()]
-    if room_number then
-        local room = rooms[room_number]
+    local room_numberumber = tenants[ply:SteamID64()]
+    if room_numberumber then
+        local room = rooms[room_numberumber]
         room._grace = nil
 
         log_event("info", room.name, "restored from grace")
@@ -324,9 +332,9 @@ end)
 
 hook.Add("PlayerDisconnected", tag, function(ply)
     local ply_sid64 = ply:SteamID64()
-    local room_number = tenants[ply_sid64]
-    if room_number then
-        local room = rooms[room_number]
+    local room_numberumber = tenants[ply_sid64]
+    if room_numberumber then
+        local room = rooms[room_numberumber]
         room._grace = true
 
         log_event("info", room.name, "entering grace for 3 minutes")
@@ -388,18 +396,18 @@ hook.Add("InitPostEntity", tag, function()
     triggers = {}
     entrances = {}
 
-    for room_n = 1, Apartments.NUM_ROOMS do
-        local as_two_digits = string.format("%02d", room_n)
+    for room_number = 1, Apartments.NUM_ROOMS do
+        local as_two_digits = string.format("%02d", room_number)
 
         local trigger_name = "trigger_apartment_" .. as_two_digits
         local trigger = GetTrigger(trigger_name)
 
-        local entrance = get_room_entrance(trigger:GetPos(), room_n)
+        local entrance = get_room_entrance(trigger:GetPos(), room_number)
 
-        entrances[entrance:EntIndex()] = room_n
-        triggers[trigger] = room_n
+        entrances[entrance:EntIndex()] = room_number
+        triggers[trigger] = room_number
 
-        rooms[room_n] = {
+        rooms[room_number] = {
             name = "Apt. Room " .. as_two_digits,
             entrance = entrance,
             trigger = trigger,
@@ -414,21 +422,44 @@ hook.Add("PostCleanupMap", tag, function()
     entrances = {}
     triggers = {}
 
-    for room_n = 1, Apartments.NUM_ROOMS do
-        local room = rooms[room_n]
-        local as_two_digits = string.format("%02d", room_n)
+    for room_number = 1, Apartments.NUM_ROOMS do
+        local room = rooms[room_number]
+        local as_two_digits = string.format("%02d", room_number)
 
         local trigger_name = "trigger_apartment_" .. as_two_digits
         local trigger = GetTrigger(trigger_name)
 
-        local entrance = get_room_entrance(trigger:GetPos(), room_n)
+        local entrance = get_room_entrance(trigger:GetPos(), room_number)
 
         room.trigger = trigger
         room.entrance = entrance
 
-        entrances[entrance:EntIndex()] = room_n
-        triggers[trigger] = room_n
+        entrances[entrance:EntIndex()] = room_number
+        triggers[trigger] = room_number
     end
 
     net_broadcast_table(SV_NET_UPDATE_ENTRANCES, entrances)
+end)
+
+hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
+    local room_number = entrances[ent:EntIndex()]
+    if not room_number then return end
+
+    local room = rooms[room_number]
+    if not room.tenant then return end
+
+    local tenant = player.GetBySteamID64(room.tenant)
+    if ply.Unrestricted or tenant == ply then return end
+
+    if room.passage == PASSAGE_ALL then return end
+    if room.passage == PASSAGE_GUESTS and room.guests[ply:UserID()] then return end
+    if room.passage == PASSAGE_FRIENDS and tenant.IsFriend and tenant:IsFriend(ply) then return end
+
+    if not entrance_last_knocked[ply] then entrance_last_knocked[ply] = CurTime() - 20 end
+    if entrance_last_knocked[ply] + 20 > CurTime() then return false end
+
+    entrance_last_knocked[ply] = CurTime()
+    knock_on_entrance(ent)
+
+    return false
 end)
