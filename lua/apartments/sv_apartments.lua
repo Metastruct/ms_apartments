@@ -43,16 +43,16 @@ local function net_broadcast_table(id, tbl)
     net.Broadcast()
 end
 
-local function is_valid_room(room_numberumber)
-    if not room_numberumber or not rooms[room_numberumber] then
+local function is_valid_room(room_number)
+    if not room_number or not rooms[room_number] then
         return false
     end
 
     return true
 end
 
-local function is_valid_client_request(ply, id, room_numberumber, state)
-    local room = rooms[room_numberumber]
+local function is_valid_client_request(ply, id, room_number, state)
+    local room = rooms[room_number]
 
     if id == CL_NET_RENT and state == 1 and tenants[ply:SteamID64()] then
         return false
@@ -160,11 +160,11 @@ function Apartments.GetTriggers()
     return triggers
 end
 
-function Apartments.SetTenant(room_numberumber, tenant)
-    if not is_valid_room(room_numberumber) or not tenant:IsPlayer() then return end
+function Apartments.SetTenant(room_number, tenant)
+    if not is_valid_room(room_number) or not tenant:IsPlayer() then return end
 
-    local room = rooms[room_numberumber]
-    tenants[tenant:SteamID64()] = room_numberumber
+    local room = rooms[room_number]
+    tenants[tenant:SteamID64()] = room_number
     room.tenant = tenant:SteamID64()
     room.passage = PASSAGE_GUESTS
     room.guests = {}
@@ -193,16 +193,16 @@ function Apartments.EvictTenant(tenant)
     log_event("info", tenant.Nick and tenant:Nick() or tenant, "evicted from", room.name)
 end
 
-function Apartments.GetTenant(room_numberumber)
-    if not is_valid_room(room_numberumber) then return end
+function Apartments.GetTenant(room_number)
+    if not is_valid_room(room_number) then return end
 
-    return rooms[room_numberumber].tenant
+    return rooms[room_number].tenant
 end
 
-function Apartments.Invite(room_numberumber, guest)
-    if not is_valid_room(room_numberumber) or not guest:IsPlayer() then return end
+function Apartments.Invite(room_number, guest)
+    if not is_valid_room(room_number) or not guest:IsPlayer() then return end
 
-    local room = rooms[room_numberumber]
+    local room = rooms[room_number]
     -- either tabletojson or compress turns these keys into numbers, sid64 is too big
     room.guests[guest:UserID()] = true
 
@@ -210,10 +210,10 @@ function Apartments.Invite(room_numberumber, guest)
     log_event("info", guest:Nick(), "invited to", room.name)
 end
 
-function Apartments.RevokeInvitation(room_numberumber, guest)
-    if not is_valid_room(room_numberumber) or not guest:IsPlayer() then return end
+function Apartments.RevokeInvitation(room_number, guest)
+    if not is_valid_room(room_number) or not guest:IsPlayer() then return end
 
-    local room = rooms[room_numberumber]
+    local room = rooms[room_number]
     local guest_uid = guest:UserID()
 
     if room.guests[guest_uid] then
@@ -228,20 +228,20 @@ function Apartments.RevokeInvitation(room_numberumber, guest)
     end
 end
 
-function Apartments.GetInvited(room_numberumber, guest)
-    if not is_valid_room(room_numberumber) or guest and not guest:IsPlayer() then return end
+function Apartments.GetInvited(room_number, guest)
+    if not is_valid_room(room_number) or guest and not guest:IsPlayer() then return end
 
     if not guest then
-        return rooms[room_numberumber].guests
+        return rooms[room_number].guests
     end
 
-    return rooms[room_numberumber].guests[guest:UserID()]
+    return rooms[room_number].guests[guest:UserID()]
 end
 
-function Apartments.SetPassage(room_numberumber, state)
-    if not is_valid_room(room_numberumber) then return end
+function Apartments.SetPassage(room_number, state)
+    if not is_valid_room(room_number) then return end
 
-    local room = rooms[room_numberumber]
+    local room = rooms[room_number]
     room.passage = state
 
     if state < PASSAGE_ALL then
@@ -263,18 +263,18 @@ function Apartments.SetPassage(room_numberumber, state)
     log_event("info", "passage set to", state, "for", room.name)
 end
 
-function Apartments.GetPassage(room_numberumber)
-    if not is_valid_room(room_numberumber) then return end
+function Apartments.GetPassage(room_number)
+    if not is_valid_room(room_number) then return end
 
-    return rooms[room_numberumber].passage
+    return rooms[room_number].passage
 end
 
 net.Receive(tag, function(_, ply)
     local id = net.ReadUInt(32)
-    local room_numberumber = net.ReadUInt(32)
+    local room_number = net.ReadUInt(32)
     local state = net.ReadUInt(32)
 
-    if not is_valid_room(room_numberumber) or not is_valid_client_request(ply, id, room_numberumber, state) then
+    if not is_valid_room(room_number) or not is_valid_client_request(ply, id, room_number, state) then
         log_event("warn", "caught bad request from", ply:Nick())
 
         return
@@ -282,7 +282,7 @@ net.Receive(tag, function(_, ply)
 
     if id == CL_NET_RENT then
         if tobool(state) then
-            Apartments.SetTenant(room_numberumber, ply)
+            Apartments.SetTenant(room_number, ply)
         else
             Apartments.EvictTenant(ply)
         end
@@ -294,16 +294,16 @@ net.Receive(tag, function(_, ply)
         local guest = Player(net.ReadUInt(32))
 
         if tobool(state) then
-            Apartments.Invite(room_numberumber, guest)
+            Apartments.Invite(room_number, guest)
         else
-            Apartments.RevokeInvitation(room_numberumber, guest)
+            Apartments.RevokeInvitation(room_number, guest)
         end
 
         return
     end
 
     if id == CL_NET_PASSAGE then
-        Apartments.SetPassage(room_numberumber, state)
+        Apartments.SetPassage(room_number, state)
     end
 end)
 
@@ -321,9 +321,9 @@ hook.Add("PlayerFullyConnected", tag, function(ply)
 
     net.Send(ply)
 
-    local room_numberumber = tenants[ply:SteamID64()]
-    if room_numberumber then
-        local room = rooms[room_numberumber]
+    local room_number = tenants[ply:SteamID64()]
+    if room_number then
+        local room = rooms[room_number]
         room._grace = nil
 
         log_event("info", room.name, "restored from grace")
@@ -332,9 +332,9 @@ end)
 
 hook.Add("PlayerDisconnected", tag, function(ply)
     local ply_sid64 = ply:SteamID64()
-    local room_numberumber = tenants[ply_sid64]
-    if room_numberumber then
-        local room = rooms[room_numberumber]
+    local room_number = tenants[ply_sid64]
+    if room_number then
+        local room = rooms[room_number]
         room._grace = true
 
         log_event("info", room.name, "entering grace for 3 minutes")
