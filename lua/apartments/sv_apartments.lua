@@ -203,8 +203,8 @@ function Apartments.Invite(room_number, guest)
     if not is_valid_room(room_number) or not guest:IsPlayer() then return end
 
     local room = rooms[room_number]
-    -- either tabletojson or compress turns these keys into numbers, sid64 is too big
     room.guests[guest:UserID()] = true
+    guest:ChatPrint(player.GetBySteamID64(room.tenant):Nick() .. " has invited you to " .. room.name .. "!")
 
     net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
     log_event("info", guest:Nick(), "invited to", room.name)
