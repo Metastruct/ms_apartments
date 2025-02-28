@@ -106,7 +106,7 @@ local function should_entity_be_in_room(ent, room)
     end
 
     local tenant = player.GetBySteamID64(room.tenant)
-    if owner == tenant then
+    if tenand and owner == tenant then
         return true
     end
 
@@ -116,7 +116,7 @@ end
 local function should_player_be_in_room(ply, room)
     if room.tenant and not ply.Unrestricted then
         local tenant = player.GetBySteamID64(room.tenant)
-        if ply == tenant then
+        if tenant and ply == tenant then
             return true
         end
 
