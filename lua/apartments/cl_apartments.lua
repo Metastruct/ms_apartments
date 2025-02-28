@@ -78,11 +78,13 @@ local function apartment_ui(room_number)
     rent_lb:DockMargin(2, 7, 0, 0)
 
     local rent_btn = rent_panel:Add("DButton")
-    if is_client_renting and tenant ~= LocalPlayer() then
-        rent_btn:SetEnabled(false)
-    else
+
+    if not tenant or tenant == LocalPlayer() then
         rent_btn:SetEnabled(true)
+    else
+        rent_btn:SetEnabled(false)
     end
+
     rent_btn:SetText(tenant == LocalPlayer() and "Abandon Room" or "Rent Room")
     rent_btn:SetHeight(50)
     rent_btn:Dock(BOTTOM)
