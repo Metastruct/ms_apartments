@@ -106,7 +106,7 @@ local function should_entity_be_in_room(ent, room)
 	end
 
 	local tenant = player.GetBySteamID64(room.tenant)
-	if tenand and owner == tenant then
+	if tenant and owner == tenant then
 		return true
 	end
 
@@ -365,7 +365,7 @@ hook.Add("TriggerPreInclude", tag, function(place, TRIGGER)
 		local room = rooms[tonumber(self.place:match("%d%d"))]
 
 		if not is_player and not should_entity_be_in_room(ent, room) then
-			if ent.Dissolve then ent:Dissolve() end
+			if not ent:IsVehicle() and ent.Dissolve then ent:Dissolve() end
 			SafeRemoveEntityDelayed(ent, 3)
 
 			return
