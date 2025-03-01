@@ -7,10 +7,18 @@ util.AddNetworkString(tag)
 local Apartments = Apartments or { NUM_ROOMS = 12 }
 _M.Apartments = Apartments
 
-local rooms = {}
-local tenants = {}
-local triggers = {}
-local entrances = {}
+local rooms, tenants, triggers, entrances
+if Apartments.GetRooms then
+	rooms = table.Copy(Apartments.GetRooms())
+	tenants = table.Copy(Apartments.GetTenants())
+	triggers = table.Copy(Apartments.GetTriggers())
+	entrances = table.Copy(Apartments.GetEntrances())
+else
+	rooms = {}
+	tenants = {}
+	triggers = {}
+	entrances = {}
+end
 
 local entrance_last_knocked = {}
 

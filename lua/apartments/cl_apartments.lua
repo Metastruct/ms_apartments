@@ -5,8 +5,14 @@ local tag = "ms_apartments"
 local Apartments = Apartments or {}
 _M.Apartments = Apartments
 
-local rooms = {}
-local entrances = {}
+local rooms, entrances
+if Apartments.GetRooms then
+	rooms = table.Copy(Apartments.GetRooms())
+	entrances = table.Copy(Apartments.GetEntrances())
+else
+	rooms = {}
+	entrances = {}
+end
 
 local PASSAGE_GUESTS = 1
 local PASSAGE_FRIENDS = 2
@@ -20,11 +26,20 @@ local CL_NET_RENT = 4
 local CL_NET_INVITE = 5
 local CL_NET_PASSAGE = 6
 
-local hooks = hookgroup.NewObj(tag)
-Apartments.hkgrp = hooks
+local hooks
+if Apartments.hkgrp then
+	hooks = Apartments.hkgrp
+else
+	hooks = hookgroup.NewObj(tag)
+	Apartments.hkgrp = hooks
+end
 
 local apartment_ui_last_open = 0
-local is_client_renting = false
+if Apartments.GetMyRoom then
+	is_client_renting = Apartments.GetMyRoom()
+else
+	is_client_renting = false
+end
 
 local function request_action_from_server(id, room_number, state, guest_uid)
 	net.Start(tag)
@@ -186,6 +201,10 @@ local function apartment_ui(room_number)
 	function who_can_enter:OnSelect()
 		who_can_enter_btn:SetEnabled(true)
 	end
+end
+
+function Apartments.GetMyRoom()
+	return is_client_renting
 end
 
 function Apartments.GetRooms()
