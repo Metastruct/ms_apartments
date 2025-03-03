@@ -9,6 +9,7 @@ if SERVER then
 	AddCSLuaFile("apartments/cl_coloring.lua")
 
 	include("apartments/sv_apartments.lua")
+	include("apartments/sv_nocollide.lua")
 end
 
 if CLIENT then
