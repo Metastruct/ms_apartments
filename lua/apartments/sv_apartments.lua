@@ -136,7 +136,7 @@ local function should_player_be_in_room(ply, room)
 			return true
 		end
 
-		if room.passage == PASSAGE_FRIENDS and tenant.IsFriend and tenant:IsFriend(ply) then
+		if room.passage == PASSAGE_FRIENDS and tenant and tenant.IsFriend and tenant:IsFriend(ply) then
 			return true
 		end
 	else
@@ -461,7 +461,7 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 
 	if room.passage == PASSAGE_ALL then return end
 	if room.passage == PASSAGE_GUESTS and room.guests[ply:UserID()] then return end
-	if room.passage == PASSAGE_FRIENDS and tenant.IsFriend and tenant:IsFriend(ply) then return end
+	if room.passage == PASSAGE_FRIENDS and tenant and tenant.IsFriend and tenant:IsFriend(ply) then return end
 
 	if not entrance_last_knocked[ply] then entrance_last_knocked[ply] = CurTime() - 20 end
 	if entrance_last_knocked[ply] + 20 > CurTime() then return false end
