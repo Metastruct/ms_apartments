@@ -14,7 +14,12 @@ hook.Add("ApartmentEnter", ("%s_%s"):format(tag, id), function(ent, trigger, roo
     if not ent:IsPlayer() or MetAchievements.HasAchievement(ent, id) then return end
 
     local tenant = player.GetBySteamID64(room.tenant)
-    if not tenant then return end
+    if not tenant and not ent._aptinfogiven then
+        ent:ChatPrint("NOTE: You may rent a room by pressing your reload key (default: R) on an apartment door.")
+        ent._aptinfogiven = true
+
+        return
+    end
 
     if ent == tenant then
         MetAchievements.UnlockAchievement(ent, id)
