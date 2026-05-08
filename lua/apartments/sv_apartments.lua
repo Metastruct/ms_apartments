@@ -288,7 +288,7 @@ function Apartments.TempBan(ply)
 end
 
 function Apartments.TriggerIn(ent, ply)
-	if ply and session_blacklist[ply:SteamID64()] then
+	if ply.IsPlayer and ply:IsPlayer() and session_blacklist[ply:SteamID64()] then
 		ply:Spawn()
 		ply:ChatPrint("You've been temporarily banned from entering the apartments!")
 	end
