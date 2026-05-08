@@ -190,7 +190,7 @@ function Apartments.SetTenant(room_number, tenant)
 end
 
 function Apartments.EvictTenant(tenant)
-	local tenant_sid64 = tenant:IsPlayer() and tenant:SteamID64() or tenant
+	local tenant_sid64 = tenant.IsPlayer and tenant:IsPlayer() and tenant:SteamID64() or tenant
 	if not tenants[tenant_sid64] then return end
 
 	local room = rooms[tenants[tenant_sid64]]
@@ -280,7 +280,7 @@ function Apartments.GetPassage(room_number)
 end
 
 function Apartments.TempBan(ply)
-	local ply_sid64 = ply:IsPlayer() and ply:SteamID64() or ply
+	local ply_sid64 = ply.IsPlayer and ply:IsPlayer() and ply:SteamID64() or ply
 	session_blacklist[ply_sid64] = true
 
 	log_event("info", "temporarily banned", ply_sid64, "from apartments")
