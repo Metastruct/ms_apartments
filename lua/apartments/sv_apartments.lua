@@ -1,4 +1,3 @@
-
 module("ms", package.seeall)
 local tag = "ms_apartments"
 
@@ -20,7 +19,10 @@ else
 	entrances = {}
 end
 
+local session_blacklist = {} -- also cleared on reload but that's fine
+
 local entrance_last_knocked = {}
+local knocks_accumulated = {}
 
 local PASSAGE_GUESTS = 1
 local PASSAGE_FRIENDS = 2
@@ -188,7 +190,7 @@ function Apartments.SetTenant(room_number, tenant)
 end
 
 function Apartments.EvictTenant(tenant)
-	local tenant_sid64 = type(tenant) == "string" and tenant or tenant:SteamID64()
+	local tenant_sid64 = tenant:IsPlayer() and tenant:SteamID64() or tenant
 	if not tenants[tenant_sid64] then return end
 
 	local room = rooms[tenants[tenant_sid64]]
@@ -275,6 +277,20 @@ function Apartments.GetPassage(room_number)
 	if not is_valid_room(room_number) then return end
 
 	return rooms[room_number].passage
+end
+
+function Apartments.TempBan(ply)
+	local ply_sid64 = ply:IsPlayer() and ply:SteamID64() or ply
+	session_blacklist[ply_sid64] = true
+
+	log_event("info", "temporarily banned", ply_sid64, "from apartments")
+end
+
+function Apartments.TriggerIn(ent)
+	if ent:IsPlayer() and session_blacklist[ent:SteamID64()] then
+		ent:Spawn()
+		ent:ChatPrint("You've been temporarily banned from entering the apartments!")
+	end
 end
 
 net.Receive(tag, function(_, ply)
@@ -466,7 +482,24 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 	if not entrance_last_knocked[ply] then entrance_last_knocked[ply] = CurTime() - 20 end
 	if entrance_last_knocked[ply] + 20 > CurTime() then return false end
 
+	if not knocks_accumulated[ply] then
+		knocks_accumulated[ply] = 1
+
+		timer.Simple(900, function() -- 15 minutes
+			knocks_accumulated[ply] = nil
+		end)
+	else
+		knocks_accumulated[ply] = knocks_accumulated[ply] + 1
+	end
+
 	entrance_last_knocked[ply] = CurTime()
+
+	if knocks_accumulated[ply] >= 4 then
+		ply:ChatPrint("You're knocking too much! Please wait a while.")
+
+		return false
+	end
+
 	knock_on_entrance(ent)
 
 	return false
