@@ -94,7 +94,7 @@ local function apartment_ui(room_number)
 
 	local rent_btn = rent_panel:Add("DButton")
 
-	if not tenant or tenant == LocalPlayer() then
+	if not room.tenant or tenant == LocalPlayer() then
 		rent_btn:SetEnabled(true)
 	else
 		rent_btn:SetEnabled(false)
