@@ -19,7 +19,8 @@ else
 	entrances = {}
 end
 
-local session_blacklist = {} -- also cleared on reload but that's fine
+Apartments.session_blacklist = {}
+local session_blacklist = Apartments.session_blacklist -- also cleared on reload but that's fine
 
 local entrance_last_knocked = {}
 local knocks_accumulated = {}
@@ -286,10 +287,10 @@ function Apartments.TempBan(ply)
 	log_event("info", "temporarily banned", ply_sid64, "from apartments")
 end
 
-function Apartments.TriggerIn(ent)
-	if ent:IsPlayer() and session_blacklist[ent:SteamID64()] then
-		ent:Spawn()
-		ent:ChatPrint("You've been temporarily banned from entering the apartments!")
+function Apartments.TriggerIn(ent, ply)
+	if ply and session_blacklist[ply:SteamID64()] then
+		ply:Spawn()
+		ply:ChatPrint("You've been temporarily banned from entering the apartments!")
 	end
 end
 
