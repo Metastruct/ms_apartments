@@ -223,9 +223,13 @@ net.Receive(tag, function()
 		rooms = util.JSONToTable(util.Decompress(net.ReadData(payload_size)))
 
 		is_client_renting = false
-		for room_number, room in pairs(rooms) do
-			if room.tenant == LocalPlayer():SteamID64() then
-				is_client_renting = room_number
+		local lp = LocalPlayer()
+		local my_id64 = lp and lp.SteamID64 and lp:SteamID64()
+		if my_id64 then
+			for room_number, room in pairs(rooms) do
+				if room.tenant == my_id64 then
+					is_client_renting = room_number
+				end
 			end
 		end
 	end
