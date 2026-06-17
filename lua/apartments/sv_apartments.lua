@@ -3,6 +3,41 @@ local tag = "ms_apartments"
 
 util.AddNetworkString(tag)
 
+--[[
+	use something like this later when needed
+
+	local ACTIVE_LANDMARK = ""
+	for _, name in pairs({"apartments", "apartments2", ...}) do
+		if landmark.get(name) then
+			ACTIVE_LANDMARK = name
+			break
+		end
+	end
+]]
+
+local ACTIVE_LANDMARK = "apartments"
+
+local TRIGGER_OFFSETS = {
+	["apartments"] = {
+		Vector(434.849579, -583.250977, -116.000000),
+		Vector(434.849579, -1411.250977, -116.000000),
+		Vector(-445.150421, -583.250977, -116.000000),
+		Vector(-445.150421, -1411.250977, -116.000000),
+		Vector(434.849579, -583.250977, 76.000000),
+		Vector(434.849579, -1411.250977, 76.000000),
+		Vector(-445.150421, -583.250977, 76.000000),
+		Vector(-445.150421, -1411.250977, 76.000000),
+		Vector(434.849579, -583.250977, 244.000000),
+		Vector(434.849579, -1411.250977, 244.000000),
+		Vector(-445.150421, -583.250977, 244.000000),
+		Vector(-445.150421, -1411.250977, 244.000000)
+	}
+}
+
+local ROOM_SEARCH = {
+	["apartments"] = {bounds = Vector(370, 370, 5), index = 1}
+}
+
 local Apartments = Apartments or { NUM_ROOMS = 12 }
 _M.Apartments = Apartments
 
@@ -81,7 +116,7 @@ local function is_valid_client_request(ply, id, room_number, state)
 end
 
 local function get_room_entrance(trigger_pos, room_number)
-	local box_bounds = Vector(370, 370, 5)
+	local box_bounds = ROOM_SEARCH[ACTIVE_LANDMARK].bounds
 	local mins, maxs = trigger_pos - box_bounds, trigger_pos + box_bounds
 	local near = ents.FindInBox(mins, maxs)
 
@@ -101,7 +136,8 @@ local function get_room_entrance(trigger_pos, room_number)
 	table.sort(doors, function(a, b) return a[2] > b[2] end)
 
 	-- relies on the map
-	return doors[1][1]
+	local result_index = ROOM_SEARCH[ACTIVE_LANDMARK].index
+	return doors[result_index][1]
 end
 
 local function should_entity_be_in_room(ent, room)
@@ -289,8 +325,8 @@ end
 
 function Apartments.TriggerIn(ent, is_ply)
 	if is_ply and session_blacklist[ent:SteamID64()] then
-		ply:Spawn()
-		ply:ChatPrint("You've been temporarily banned from entering the apartments!")
+		ent:Spawn()
+		ent:ChatPrint("You've been temporarily banned from entering the apartments!")
 	end
 end
 
@@ -421,13 +457,14 @@ hook.Add("InitPostEntity", tag, function()
 	triggers = {}
 	entrances = {}
 
+	local lm_pos = landmark.get(ACTIVE_LANDMARK)
+
 	for room_number = 1, Apartments.NUM_ROOMS do
 		local as_two_digits = string.format("%02d", room_number)
+		local entrance = get_room_entrance(lm_pos + TRIGGER_OFFSETS[room_number], room_number)
 
 		local trigger_name = "trigger_apartment_" .. as_two_digits
 		local trigger = GetTrigger(trigger_name)
-
-		local entrance = get_room_entrance(trigger:GetPos(), room_number)
 
 		entrances[entrance:EntIndex()] = room_number
 		triggers[trigger] = room_number
@@ -447,14 +484,15 @@ hook.Add("PostCleanupMap", tag, function()
 	entrances = {}
 	triggers = {}
 
+	local lm_pos = landmark.get(ACTIVE_LANDMARK)
+
 	for room_number = 1, Apartments.NUM_ROOMS do
 		local room = rooms[room_number]
 		local as_two_digits = string.format("%02d", room_number)
+		local entrance = get_room_entrance(lm_pos + TRIGGER_OFFSETS[room_number], room_number)
 
 		local trigger_name = "trigger_apartment_" .. as_two_digits
 		local trigger = GetTrigger(trigger_name)
-
-		local entrance = get_room_entrance(trigger:GetPos(), room_number)
 
 		room.trigger = trigger
 		room.entrance = entrance
