@@ -224,7 +224,7 @@ net.Receive(tag, function()
 
 		is_client_renting = false
 		local lp = LocalPlayer()
-		local my_id64 = IsValid(lp) and lp:SteamID64() or nil
+		local my_id64 = lp and lp.SteamID64 and lp:SteamID64()
 		if my_id64 then
 			for room_number, room in pairs(rooms) do
 				if room.tenant == my_id64 then
