@@ -461,7 +461,9 @@ hook.Add("InitPostEntity", tag, function()
 
 	for room_number = 1, Apartments.NUM_ROOMS do
 		local as_two_digits = string.format("%02d", room_number)
-		local entrance = get_room_entrance(lm_pos + TRIGGER_OFFSETS[room_number], room_number)
+
+		local off = TRIGGER_OFFSETS[ACTIVE_LANDMARK][room_number]
+		local entrance = get_room_entrance(lm_pos + off, room_number)
 
 		local trigger_name = "trigger_apartment_" .. as_two_digits
 		local trigger = GetTrigger(trigger_name)
@@ -489,7 +491,9 @@ hook.Add("PostCleanupMap", tag, function()
 	for room_number = 1, Apartments.NUM_ROOMS do
 		local room = rooms[room_number]
 		local as_two_digits = string.format("%02d", room_number)
-		local entrance = get_room_entrance(lm_pos + TRIGGER_OFFSETS[room_number], room_number)
+
+		local off = TRIGGER_OFFSETS[ACTIVE_LANDMARK][room_number]
+		local entrance = get_room_entrance(lm_pos + off, room_number)
 
 		local trigger_name = "trigger_apartment_" .. as_two_digits
 		local trigger = GetTrigger(trigger_name)
