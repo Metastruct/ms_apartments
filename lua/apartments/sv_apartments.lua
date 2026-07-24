@@ -213,7 +213,7 @@ function Apartments.SetTenant(room_number, tenant)
 	local room = rooms[room_number]
 	tenants[tenant:SteamID64()] = room_number
 	room.tenant = tenant:SteamID64()
-	room.passage = PASSAGE_GUESTS
+	room.passage = PASSAGE_ALL
 	room.guests = {}
 
 	for ply in pairs(room.trigger:GetPlayers()) do
@@ -224,6 +224,8 @@ function Apartments.SetTenant(room_number, tenant)
 
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 	log_event("info", tenant:Nick(), "rented", room.name)
+
+	tenant:ChatPrint("You now own room " .. room_number .. ".\nNote that passage is public by default!")
 end
 
 function Apartments.EvictTenant(tenant)
@@ -434,6 +436,7 @@ hook.Add("TriggerPreInclude", tag, function(place, TRIGGER)
 
 		if is_player and not should_player_be_in_room(ent, room) then
 			ent:SetPos(landmark.get("apartments") or Vector())
+			ent:ChatPrint("You can't enter " .. room.name .. "!")
 
 			return
 		end
