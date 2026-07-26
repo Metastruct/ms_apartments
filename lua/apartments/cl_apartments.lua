@@ -27,6 +27,9 @@ local CL_NET_INVITE = 5
 local CL_NET_PASSAGE = 6
 
 local hooks
+local is_client_renting
+local apartment_ui_last_open = 0
+
 if Apartments.hkgrp then
 	hooks = Apartments.hkgrp
 else
@@ -34,7 +37,6 @@ else
 	Apartments.hkgrp = hooks
 end
 
-local apartment_ui_last_open = 0
 if Apartments.GetMyRoom then
 	is_client_renting = Apartments.GetMyRoom()
 else
