@@ -325,6 +325,13 @@ function Apartments.TempBan(ply)
 	log_event("info", "temporarily banned", ply_sid64, "from apartments")
 end
 
+function Apartments.Unban(ply)
+	local ply_sid64 = ply.IsPlayer and ply:IsPlayer() and ply:SteamID64() or ply
+	session_blacklist[ply_sid64] = nil
+
+	log_event("info", "unbanned", ply_sid64, "from apartments")
+end
+
 function Apartments.TriggerIn(ent, is_ply)
 	if is_ply and session_blacklist[ent:SteamID64()] then
 		ent:Spawn()
