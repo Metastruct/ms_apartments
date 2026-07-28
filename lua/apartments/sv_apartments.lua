@@ -209,6 +209,7 @@ end
 
 function Apartments.SetTenant(room_number, tenant)
 	if not is_valid_room(room_number) or not tenant:IsPlayer() then return end
+	if tenants[tenant:SteamID64()] then return end
 
 	local room = rooms[room_number]
 	tenants[tenant:SteamID64()] = room_number
@@ -227,6 +228,7 @@ end
 
 function Apartments.TransferTenant(room_number, new_tenant)
 	if not is_valid_room(room_number) or not new_tenant:IsPlayer() then return end
+	if tenants[new_tenant:SteamID64()] then return end
 
 	local room = rooms[room_number]
 	local old_tenant = room.tenant
@@ -476,8 +478,6 @@ hook.Add("PlayerDisconnected", tag, function(ply)
 				if IsValid(room._willed_to) then
 					Apartments.TransferTenant(room_number, room._willed_to)
 					room._willed_to = nil
-
-					log_event("info", room.name, "transferred by will")
 
 					return
 				end
