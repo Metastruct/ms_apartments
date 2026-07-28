@@ -90,11 +90,7 @@ local function net_broadcast_table(id, tbl)
 end
 
 local function is_valid_room(room_number)
-	if not room_number or not rooms[room_number] then
-		return false
-	end
-
-	return true
+	return room_number and rooms[room_number]
 end
 
 local function is_valid_client_request(ply, id, room_number, state)
@@ -246,10 +242,14 @@ function Apartments.Invite(room_number, guest)
 	if not is_valid_room(room_number) or not guest:IsPlayer() then return end
 
 	local room = rooms[room_number]
+	local tenant = player.GetBySteamID64(room.tenant)
+
 	room.guests[guest:UserID()] = true
-	guest:ChatPrint(player.GetBySteamID64(room.tenant):Nick() .. " has invited you to " .. room.name .. "!")
+	guest:ChatPrint(tenant:Nick() .. " has invited you to " .. room.name .. "!")
 
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
+
+	tenant:ChatPrint("Invite sent to " .. guest:Nick())
 	log_event("info", guest:Nick(), "invited to", room.name)
 end
 
@@ -287,8 +287,9 @@ function Apartments.SetPassage(room_number, state)
 	local room = rooms[room_number]
 	room.passage = state
 
+	local tenant = player.GetBySteamID64(room.tenant)
+
 	if state < PASSAGE_ALL then
-		local tenant = player.GetBySteamID64(room.tenant)
 		for ply in pairs(room.trigger:GetPlayers()) do
 			if ply == tenant then continue end
 
@@ -303,7 +304,11 @@ function Apartments.SetPassage(room_number, state)
 	end
 
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
-	log_event("info", "passage set to", state, "for", room.name)
+
+	local state_print = ({"'Guests Only'", "'Guests & Friends'", "'Everyone'"})[state] or "INVALID??"
+
+	tenant:ChatPrint("Passage set to " .. state_print .. ".")
+	log_event("info", "passage set to", state_print, "for", room.name)
 end
 
 function Apartments.GetPassage(room_number)
