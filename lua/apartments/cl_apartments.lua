@@ -114,7 +114,7 @@ local function apartment_ui(room_number)
 	function rent_panel:Paint(w, h) end
 
 	local rent_lb = rent_panel:Add("DLabel")
-	rent_lb:SetText("You can only own one room at a time\nRooms expire when abandoned or 3 minutes\nafter you leave.")
+	rent_lb:SetText("You can only own one room at a time\nRooms expire when abandoned or 5 minutes\nafter you leave.")
 	rent_lb:SetTextColor(color_white)
 	rent_lb:SizeToContentsY()
 	rent_lb:Dock(TOP)
