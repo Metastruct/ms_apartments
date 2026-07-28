@@ -225,7 +225,7 @@ function Apartments.SetTenant(room_number, tenant)
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 	log_event("info", tenant:Nick(), "rented", room.name)
 
-	tenant:ChatPrint("You now own room " .. room_number .. ".\nNote that passage is public by default!")
+	tenant:ChatPrint("You now own " .. room.name .. ".\nNote that passage is public by default!")
 end
 
 function Apartments.EvictTenant(tenant)
