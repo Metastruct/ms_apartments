@@ -558,5 +558,9 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 
 	knock_on_entrance(ent)
 
+	if room.trigger.pllist[tenant:UserID()] then
+		tenant:ChatPrint(ply:Nick(), "is at your door!")
+	end
+
 	return false
 end)
