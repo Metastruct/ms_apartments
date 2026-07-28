@@ -430,6 +430,8 @@ hook.Add("TriggerPreInclude", tag, function(place, TRIGGER)
 	local place_match = string.match(place, "trigger_apartment_%d%d")
 	if not place_match then return end
 
+	local room_number = tonumber(place:match("%d%d"))
+
 	function TRIGGER:Init()
 		self:EnablePlayerCounting()
 		self:EnablePlayerList()
@@ -438,7 +440,7 @@ hook.Add("TriggerPreInclude", tag, function(place, TRIGGER)
 	end
 
 	function TRIGGER:In(ent, is_player)
-		local room = rooms[tonumber(self.place:match("%d%d"))]
+		local room = Apartments.GetRooms()[room_number]
 
 		if not is_player and not should_entity_be_in_room(ent, room) then
 			if not ent:IsVehicle() and ent.Dissolve then ent:Dissolve() end
@@ -457,9 +459,9 @@ hook.Add("TriggerPreInclude", tag, function(place, TRIGGER)
 		hook.Run("ApartmentEnter", ent, self, room)
 	end
 
-	function TRIGGER:Out(ent,is_player)
+	function TRIGGER:Out(ent, is_player)
 		if is_player then
-			local room = rooms[self.place:match("%d%d")]
+			local room = Apartments.GetRooms()[room_number]
 			hook.Run("ApartmentLeave", ent, self, room)
 		end
 	end
