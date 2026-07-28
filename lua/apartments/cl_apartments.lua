@@ -18,6 +18,9 @@ local PASSAGE_GUESTS = 1
 local PASSAGE_FRIENDS = 2
 local PASSAGE_ALL = 3
 
+local TRANSFER_TRANSFER = 1
+local TRANSFER_WILL = 2
+
 local SV_NET_UPDATE_BOTH = 1
 local SV_NET_UPDATE_ROOMS = 2
 local SV_NET_UPDATE_ENTRANCES = 3
@@ -25,8 +28,10 @@ local SV_NET_UPDATE_ENTRANCES = 3
 local CL_NET_RENT = 4
 local CL_NET_INVITE = 5
 local CL_NET_PASSAGE = 6
+local CL_NET_TRANSFER = 7
 
 local hooks
+local willed_to
 local is_client_renting
 local apartment_ui_last_open = 0
 
@@ -43,16 +48,37 @@ else
 	is_client_renting = false
 end
 
-local function request_action_from_server(id, room_number, state, guest_uid)
+local function request_rent_from_server(room_number, state)
 	net.Start(tag)
-	net.WriteUInt(id, 32)
+	net.WriteUInt(CL_NET_RENT, 32)
 	net.WriteUInt(room_number, 32)
 	net.WriteUInt(state, 32)
+	net.SendToServer()
+end
 
-	if id == CL_NET_INVITE then
-		net.WriteUInt(guest_uid, 32)
-	end
+local function request_invite_from_server(room_number, state, guest_uid)
+	net.Start(tag)
+	net.WriteUInt(CL_NET_INVITE, 32)
+	net.WriteUInt(room_number, 32)
+	net.WriteUInt(state, 32)
+	net.WriteUInt(guest_uid, 32)
+	net.SendToServer()
+end
 
+local function request_passage_from_server(room_number, state)
+	net.Start(tag)
+	net.WriteUInt(CL_NET_PASSAGE, 32)
+	net.WriteUInt(room_number, 32)
+	net.WriteUInt(state, 32)
+	net.SendToServer()
+end
+
+local function request_transfer_from_server(room_number, state, new_tenant)
+	net.Start(tag)
+	net.WriteUInt(CL_NET_TRANSFER, 32)
+	net.WriteUInt(room_number, 32)
+	net.WriteUInt(state, 32)
+	net.WritePlayer(new_tenant)
 	net.SendToServer()
 end
 
@@ -112,7 +138,7 @@ local function apartment_ui(room_number)
 	end
 
 	function rent_btn:DoClick()
-		request_action_from_server(CL_NET_RENT, room_number, is_client_renting and 0 or 1)
+		request_rent_from_server(room_number, is_client_renting and 0 or 1)
 		root:Close()
 	end
 
@@ -155,8 +181,10 @@ local function apartment_ui(room_number)
 
 	function invite_btn:DoClick()
 		local _, ply = invite_list:GetSelected()
+		if not ply then return end
+
 		local ply_uid = ply:UserID()
-		request_action_from_server(CL_NET_INVITE, room_number, room.guests[ply_uid] and 0 or 1, ply_uid)
+		request_invite_from_server(room_number, room.guests[ply_uid] and 0 or 1, ply_uid)
 		root:Close()
 	end
 
@@ -168,40 +196,99 @@ local function apartment_ui(room_number)
 		invite_btn:SetEnabled(true)
 	end
 
-	local who_can_enter_lb = invite_panel:Add("DLabel")
-	who_can_enter_lb:SetText("Control passage to your apartment")
-	who_can_enter_lb:SetTextColor(color_white)
-	who_can_enter_lb:Dock(TOP)
-	who_can_enter_lb:DockMargin(2, 14, 0, 0)
+	local passage_lb = invite_panel:Add("DLabel")
+	passage_lb:SetText("Control passage to your apartment")
+	passage_lb:SetTextColor(color_white)
+	passage_lb:Dock(TOP)
+	passage_lb:DockMargin(2, 14, 0, 0)
 
-	local who_can_enter = invite_panel:Add("DComboBox")
-	local wce_ref = {"Guests only", "Guests and Friends", "Everyone"}
-	who_can_enter:SetValue(wce_ref[room.passage])
-	who_can_enter:AddChoice("Guests only", PASSAGE_GUESTS)
-	who_can_enter:AddChoice("Guests and Friends", PASSAGE_FRIENDS)
-	who_can_enter:AddChoice("Everyone", PASSAGE_ALL)
-	who_can_enter:Dock(TOP)
-	who_can_enter:DockMargin(0, 7, 0, 0)
+	local passage = invite_panel:Add("DComboBox")
+	local passage_ref = {"Guests only", "Guests & Friends", "Everyone"}
+	passage:SetValue(passage_ref[room.passage])
+	passage:AddChoice("Guests only", PASSAGE_GUESTS)
+	passage:AddChoice("Guests & Friends", PASSAGE_FRIENDS)
+	passage:AddChoice("Everyone", PASSAGE_ALL)
+	passage:Dock(TOP)
+	passage:DockMargin(0, 7, 0, 0)
 
-	local who_can_enter_btn = invite_panel:Add("DButton")
-	who_can_enter_btn:SetEnabled(false)
-	who_can_enter_btn:SetText("Confirm")
-	who_can_enter_btn:Dock(TOP)
-	who_can_enter_btn:DockMargin(0, 7, 0, 0)
+	local passage_btn = invite_panel:Add("DButton")
+	passage_btn:SetEnabled(false)
+	passage_btn:SetText("Confirm")
+	passage_btn:Dock(TOP)
+	passage_btn:DockMargin(0, 7, 0, 0)
 
-	function who_can_enter_btn:Paint(w, h)
+	function passage_btn:Paint(w, h)
 		surface.SetDrawColor(self:IsHovered() and btn_hover_color or color_white)
 		surface.DrawRect(0, 0, w, h)
 	end
 
-	function who_can_enter_btn:DoClick()
-		local _, new_state = who_can_enter:GetSelected()
-		request_action_from_server(CL_NET_PASSAGE, room_number, new_state)
+	function passage_btn:DoClick()
+		local _, new_state = passage:GetSelected()
+		request_passage_from_server(room_number, new_state)
 		root:Close()
 	end
 
-	function who_can_enter:OnSelect()
-		who_can_enter_btn:SetEnabled(true)
+	function passage:OnSelect()
+		passage_btn:SetEnabled(true)
+	end
+
+	local transfer_panel = property_sheet:Add("DPanel")
+	property_sheet:AddSheet("Transfer", transfer_panel, "icon16/house_go.png")
+
+	function transfer_panel:Paint(w, h) end
+
+	local transfer_lb = transfer_panel:Add("DLabel")
+	transfer_lb:SetText("Transfer/will your apartment to:\n" ..
+						"(willing your room transfers it after you\nleave and your grace period expires)")
+	transfer_lb:SizeToContentsY()
+	transfer_lb:SetTextColor(color_white)
+	transfer_lb:Dock(TOP)
+	transfer_lb:DockMargin(0, 7, 0, 0)
+
+	local transfer_list = transfer_panel:Add("DComboBox")
+	transfer_list:SetValue("Choose a player")
+	transfer_list:Dock(TOP)
+	transfer_list:DockMargin(0, 7, 0, 0)
+
+	for _, ply in pairs(player.GetAll()) do
+		if ply ~= LocalPlayer() then
+			local nick = ply:Nick()
+			transfer_list:AddChoice(nick, ply, false, willed_to == ply and "icon16/award_star_gold_1.png")
+		end
+	end
+
+	local will_btn = transfer_panel:Add("DButton")
+	will_btn:SetEnabled(false)
+	will_btn:SetText("Will room")
+	will_btn:Dock(BOTTOM)
+	will_btn:DockMargin(0, 7, 0, 0)
+
+	function will_btn:DoClick()
+		local _, ply = transfer_list:GetSelected()
+		if not ply then return end
+
+		willed_to = ply
+		request_transfer_from_server(room_number, TRANSFER_WILL, ply)
+		root:Close()
+	end
+
+	local transfer_btn = transfer_panel:Add("DButton")
+	transfer_btn:SetEnabled(false)
+	transfer_btn:SetText("Transfer room")
+	transfer_btn:Dock(BOTTOM)
+	transfer_btn:DockMargin(0, 7, 0, 0)
+
+	function transfer_btn:DoClick()
+		local _, ply = transfer_list:GetSelected()
+		if not ply then return end
+
+		request_transfer_from_server(room_number, TRANSFER_TRANSFER, ply)
+		root:Close()
+	end
+
+	function transfer_list:OnSelect()
+		will_btn:SetEnabled(true)
+		transfer_btn:SetEnabled(true)
 	end
 end
 

@@ -64,6 +64,9 @@ local PASSAGE_GUESTS = 1
 local PASSAGE_FRIENDS = 2
 local PASSAGE_ALL = 3
 
+local TRANSFER_TRANSFER = 1
+local TRANSFER_WILL = 2
+
 local SV_NET_UPDATE_BOTH = 1
 local SV_NET_UPDATE_ROOMS = 2
 local SV_NET_UPDATE_ENTRANCES = 3
@@ -71,6 +74,7 @@ local SV_NET_UPDATE_ENTRANCES = 3
 local CL_NET_RENT = 4
 local CL_NET_INVITE = 5
 local CL_NET_PASSAGE = 6
+local CL_NET_TRANSFER = 7
 
 local function log_event(log_type, ...)
 	if not metalog or not metalog[log_type] then return end
@@ -212,10 +216,38 @@ function Apartments.SetTenant(room_number, tenant)
 	room.passage = PASSAGE_ALL
 	room.guests = {}
 
+	room._grace = nil
+	room._willed_to = nil
+
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 	log_event("info", tenant:Nick(), "rented", room.name)
 
 	tenant:ChatPrint("You now own " .. room.name .. ".\nNote that passage is public by default!")
+end
+
+function Apartments.TransferTenant(room_number, new_tenant)
+	if not is_valid_room(room_number) or not new_tenant:IsPlayer() then return end
+
+	local room = rooms[room_number]
+	local old_tenant = room.tenant
+	if not old_tenant then return end
+
+	tenants[old_tenant] = nil
+	room._willed_to = nil
+	room._grace = nil
+
+	tenants[new_tenant:SteamID64()] = room_number
+	room.tenant = new_tenant:SteamID64()
+
+	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
+	log_event("info", new_tenant:Nick(), "received", room.name, "by transfer from", old_tenant)
+
+	new_tenant:ChatPrint("You've been transferred ownership of " .. room.name .. "!")
+
+	local old_tenant_ply = player.GetBySteamID64(old_tenant)
+	if old_tenant_ply then
+		old_tenant_ply:ChatPrint("You've lost ownership of " .. room.name .. "!")
+	end
 end
 
 function Apartments.EvictTenant(tenant)
@@ -227,6 +259,9 @@ function Apartments.EvictTenant(tenant)
 	room.tenant = nil
 	room.passage = PASSAGE_GUESTS
 	room.guests = {}
+
+	room._grace = nil
+	room._willed_to = nil
 
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 	log_event("info", tenant.Nick and tenant:Nick() or tenant, "evicted from", room.name)
@@ -350,6 +385,8 @@ net.Receive(tag, function(_, ply)
 	local room_number = net.ReadUInt(32)
 	local state = net.ReadUInt(32)
 
+	local room = rooms[room_number]
+
 	if not is_valid_room(room_number) or not is_valid_client_request(ply, id, room_number, state) then
 		log_event("warn", "caught bad request from", ply:Nick())
 
@@ -380,6 +417,23 @@ net.Receive(tag, function(_, ply)
 
 	if id == CL_NET_PASSAGE then
 		Apartments.SetPassage(room_number, state)
+
+		return
+	end
+
+	if id == CL_NET_TRANSFER then
+		local new_tenant = net.ReadPlayer()
+		if not new_tenant:IsPlayer() then return end
+
+		if state == TRANSFER_TRANSFER then
+			Apartments.TransferTenant(room_number, new_tenant)
+		elseif state == TRANSFER_WILL then
+			room._willed_to = new_tenant
+			ply:ChatPrint("You've willed your room to " .. new_tenant:Nick())
+			new_tenant:ChatPrint(ply:Nick() .. " has willed " .. room.name .. " to you!")
+
+			log_event("info", ply, "willed their apartment to", new_tenant)
+		end
 	end
 end)
 
@@ -413,11 +467,20 @@ hook.Add("PlayerDisconnected", tag, function(ply)
 		local room = rooms[room_number]
 		room._grace = true
 
-		log_event("info", room.name, "entering grace for 3 minutes")
+		log_event("info", room.name, "entering grace for 5 minutes")
 
-		timer.Simple(60 * 3, function()
+		timer.Simple(60 * 5, function()
 			if room._grace then
 				room._grace = nil
+
+				if IsValid(room._willed_to) then
+					Apartments.TransferTenant(room_number, room._willed_to)
+					room._willed_to = nil
+
+					log_event("info", room.name, "transferred by will")
+
+					return
+				end
 
 				log_event("info", "grace expired for", room.name)
 				Apartments.EvictTenant(ply_sid64)
