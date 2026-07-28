@@ -216,12 +216,6 @@ function Apartments.SetTenant(room_number, tenant)
 	room.passage = PASSAGE_ALL
 	room.guests = {}
 
-	for ply in pairs(room.trigger:GetPlayers()) do
-		if not ply.Unrestricted and ply ~= tenant then
-			ply:SetPos(landmark.get("apartments") or Vector())
-		end
-	end
-
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 	log_event("info", tenant:Nick(), "rented", room.name)
 
@@ -295,14 +289,14 @@ function Apartments.SetPassage(room_number, state)
 
 	if state < PASSAGE_ALL then
 		local tenant = player.GetBySteamID64(room.tenant)
-		for ply, _ in pairs(room.trigger:GetPlayers()) do
+		for ply in pairs(room.trigger:GetPlayers()) do
 			if ply == tenant then continue end
 
-			if state == PASSAGE_FRIENDS and tenant.IsFriend and not tenant:IsFriend(ply) then
-				ply:SetPos(landmark.get("apartments") or Vector())
-			end
+			local is_guest = room.guests[ply:UserID()]
 
-			if state == PASSAGE_GUESTS and not room.guests[ply:UserID()] then
+			if state == PASSAGE_GUESTS and not is_guest then
+				ply:SetPos(landmark.get("apartments") or Vector())
+			elseif state == PASSAGE_FRIENDS and not is_guest and tenant.IsFriend and not tenant:IsFriend(ply) then
 				ply:SetPos(landmark.get("apartments") or Vector())
 			end
 		end
@@ -536,8 +530,10 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 	if ply.Unrestricted or tenant and tenant == ply then return end
 
 	if room.passage == PASSAGE_ALL then return end
-	if room.passage == PASSAGE_GUESTS and room.guests[ply:UserID()] then return end
-	if room.passage == PASSAGE_FRIENDS and tenant and tenant.IsFriend and tenant:IsFriend(ply) then return end
+
+	local is_guest = room.guests[ply:UserID()]
+	if room.passage == PASSAGE_GUESTS and is_guest then return end
+	if room.passage == PASSAGE_FRIENDS and is_guest or tenant and tenant.IsFriend and tenant:IsFriend(ply) then return end
 
 	if not entrance_last_knocked[ply] then entrance_last_knocked[ply] = CurTime() - 20 end
 	if entrance_last_knocked[ply] + 20 > CurTime() then return false end
