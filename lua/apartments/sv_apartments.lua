@@ -430,11 +430,19 @@ net.Receive(tag, function(_, ply)
 		if state == TRANSFER_TRANSFER then
 			Apartments.TransferTenant(room_number, new_tenant)
 		elseif state == TRANSFER_WILL then
-			room._willed_to = new_tenant
-			ply:ChatPrint("You've willed your room to " .. new_tenant:Nick())
-			new_tenant:ChatPrint(ply:Nick() .. " has willed " .. room.name .. " to you!")
+			if room._willed_to ~= new_tenant then
+				room._willed_to = new_tenant
+				ply:ChatPrint("You've willed your room to " .. new_tenant:Nick())
+				new_tenant:ChatPrint(ply:Nick() .. " has willed " .. room.name .. " to you!")
 
-			log_event("info", ply, "willed their apartment to", new_tenant)
+				log_event("info", ply, "willed their apartment to", new_tenant)
+			else
+				room._willed_to = nil
+				ply:ChatPrint("Will undone.")
+				new_tenant:ChatPrint(room.name .. " is no longer willed to you.")
+
+				log_event("info", ply, "undid will for", room.name)
+			end
 		end
 	end
 end)

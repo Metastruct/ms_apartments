@@ -267,7 +267,7 @@ local function apartment_ui(room_number)
 		local _, ply = transfer_list:GetSelected()
 		if not ply then return end
 
-		willed_to = ply
+		willed_to = willed_to ~= ply and ply or nil
 		request_transfer_from_server(room_number, TRANSFER_WILL, ply)
 		root:Close()
 	end
@@ -289,6 +289,9 @@ local function apartment_ui(room_number)
 	function transfer_list:OnSelect()
 		will_btn:SetEnabled(true)
 		transfer_btn:SetEnabled(true)
+
+		local _, ply = self:GetSelected()
+		will_btn:SetText(willed_to == ply and "Undo will" or "Will room")
 	end
 end
 
