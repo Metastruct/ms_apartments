@@ -86,8 +86,13 @@ local function apartment_ui(room_number)
 	local room = rooms[room_number]
 	local tenant = player.GetBySteamID64(room.tenant)
 
-	local root_color = Color(110, 110, 110, 255)
-	local btn_hover_color = Color(240, 240, 240, 255)
+	local function btn_paint(self, w, h)
+		derma.SkinHook("Paint", "Button", self, w, h)
+	end
+
+	local function cbb_paint(self, w, h)
+		derma.SkinHook("Paint", "ComboBox", self, w, h)
+	end
 
 	local root = vgui.Create("DFrame")
 	root:SetSize(250, 250)
@@ -97,15 +102,14 @@ local function apartment_ui(room_number)
 	root:MakePopup()
 
 	function root:Paint(w, h)
-		draw.RoundedBox(10, 0, 0, w, h, root_color)
+		derma.SkinHook("Paint", "Frame", self, w, h)
 	end
 
 	local property_sheet = root:Add("DPropertySheet")
 	property_sheet:Dock(FILL)
 
 	function property_sheet:Paint(w, h)
-		surface.SetDrawColor(color_transparent)
-		surface.DrawRect(0, 0, w, h)
+		derma.SkinHook("Paint", "PropertySheet", self, w, h)
 	end
 
 	local rent_panel = property_sheet:Add("DPanel")
@@ -132,10 +136,7 @@ local function apartment_ui(room_number)
 	rent_btn:SetHeight(50)
 	rent_btn:Dock(BOTTOM)
 
-	function rent_btn:Paint(w, h)
-		surface.SetDrawColor((self:IsEnabled() and self:IsHovered()) and btn_hover_color or color_white)
-		surface.DrawRect(0, 0, w, h)
-	end
+	rent_btn.Paint = btn_paint
 
 	function rent_btn:DoClick()
 		request_rent_from_server(room_number, is_client_renting and 0 or 1)
@@ -161,6 +162,8 @@ local function apartment_ui(room_number)
 	invite_list:Dock(TOP)
 	invite_list:DockMargin(0, 7, 0, 0)
 
+	invite_list.Paint = cbb_paint
+
 	for _, ply in pairs(player.GetAll()) do
 		if ply ~= LocalPlayer() then
 			local nick = ply:Nick()
@@ -174,10 +177,7 @@ local function apartment_ui(room_number)
 	invite_btn:Dock(TOP)
 	invite_btn:DockMargin(0, 7, 0, 0)
 
-	function invite_btn:Paint(w, h)
-		surface.SetDrawColor((self:IsEnabled() and self:IsHovered()) and btn_hover_color or color_white)
-		surface.DrawRect(0, 0, w, h)
-	end
+	invite_btn.Paint = btn_paint
 
 	function invite_btn:DoClick()
 		local _, ply = invite_list:GetSelected()
@@ -202,14 +202,16 @@ local function apartment_ui(room_number)
 	passage_lb:Dock(TOP)
 	passage_lb:DockMargin(2, 14, 0, 0)
 
-	local passage = invite_panel:Add("DComboBox")
+	local passage_list = invite_panel:Add("DComboBox")
 	local passage_ref = {"Guests only", "Guests & Friends", "Everyone"}
-	passage:SetValue(passage_ref[room.passage])
-	passage:AddChoice("Guests only", PASSAGE_GUESTS)
-	passage:AddChoice("Guests & Friends", PASSAGE_FRIENDS)
-	passage:AddChoice("Everyone", PASSAGE_ALL)
-	passage:Dock(TOP)
-	passage:DockMargin(0, 7, 0, 0)
+	passage_list:SetValue(passage_ref[room.passage])
+	passage_list:AddChoice("Guests only", PASSAGE_GUESTS)
+	passage_list:AddChoice("Guests & Friends", PASSAGE_FRIENDS)
+	passage_list:AddChoice("Everyone", PASSAGE_ALL)
+	passage_list:Dock(TOP)
+	passage_list:DockMargin(0, 7, 0, 0)
+
+	passage_list.Paint = cbb_paint
 
 	local passage_btn = invite_panel:Add("DButton")
 	passage_btn:SetEnabled(false)
@@ -217,18 +219,15 @@ local function apartment_ui(room_number)
 	passage_btn:Dock(TOP)
 	passage_btn:DockMargin(0, 7, 0, 0)
 
-	function passage_btn:Paint(w, h)
-		surface.SetDrawColor(self:IsHovered() and btn_hover_color or color_white)
-		surface.DrawRect(0, 0, w, h)
-	end
+	passage_btn.Paint = btn_paint
 
 	function passage_btn:DoClick()
-		local _, new_state = passage:GetSelected()
+		local _, new_state = passage_list:GetSelected()
 		request_passage_from_server(room_number, new_state)
 		root:Close()
 	end
 
-	function passage:OnSelect()
+	function passage_list:OnSelect()
 		passage_btn:SetEnabled(true)
 	end
 
@@ -250,6 +249,8 @@ local function apartment_ui(room_number)
 	transfer_list:Dock(TOP)
 	transfer_list:DockMargin(0, 7, 0, 0)
 
+	transfer_list.Paint = cbb_paint
+
 	for _, ply in pairs(player.GetAll()) do
 		if ply ~= LocalPlayer() then
 			local nick = ply:Nick()
@@ -262,6 +263,8 @@ local function apartment_ui(room_number)
 	will_btn:SetText("Will room")
 	will_btn:Dock(BOTTOM)
 	will_btn:DockMargin(0, 7, 0, 0)
+
+	will_btn.Paint = btn_paint
 
 	function will_btn:DoClick()
 		local _, ply = transfer_list:GetSelected()
@@ -277,6 +280,8 @@ local function apartment_ui(room_number)
 	transfer_btn:SetText("Transfer room")
 	transfer_btn:Dock(BOTTOM)
 	transfer_btn:DockMargin(0, 7, 0, 0)
+
+	transfer_btn.Paint = btn_paint
 
 	function transfer_btn:DoClick()
 		local _, ply = transfer_list:GetSelected()
