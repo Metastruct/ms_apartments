@@ -17,8 +17,12 @@ util.AddNetworkString(tag)
 
 local ACTIVE_LANDMARK = "apartments"
 
-local TRIGGER_OFFSETS = {
-	["apartments"] = {
+local ROOM_COUNTS = {
+	["apartments"] = 12,
+}
+
+local TRIGGER_OFFSETS = { -- landmark pos + offset for the position we want
+	["apartments"] = { -- this is just ordered from rooms 1 to 12
 		Vector(434.849579, -583.250977, -116.000000),
 		Vector(434.849579, -1411.250977, -116.000000),
 		Vector(-445.150421, -583.250977, -116.000000),
@@ -34,11 +38,11 @@ local TRIGGER_OFFSETS = {
 	}
 }
 
-local ROOM_SEARCH = {
-	["apartments"] = {bounds = Vector(370, 370, 5), index = 1}
+local ROOM_SEARCH = { -- entrance search bounds, at what index is our entrance at by the end
+	["apartments"] = { bounds = Vector(370, 370, 5), index = 1 }
 }
 
-local Apartments = Apartments or { NUM_ROOMS = 12 }
+local Apartments = Apartments or { NUM_ROOMS = ROOM_COUNTS[ACTIVE_LANDMARK] }
 _M.Apartments = Apartments
 
 local rooms, tenants, triggers, entrances
@@ -115,7 +119,8 @@ local function is_valid_client_request(ply, id, room_number, state)
 	return true
 end
 
-local function get_room_entrance(trigger_pos, room_number)
+local function get_room_entrance(room_number)
+	local trigger_pos = landmark.get(ACTIVE_LANDMARK) + TRIGGER_OFFSETS[ACTIVE_LANDMARK][room_number]
 	local box_bounds = ROOM_SEARCH[ACTIVE_LANDMARK].bounds
 	local mins, maxs = trigger_pos - box_bounds, trigger_pos + box_bounds
 	local near = ents.FindInBox(mins, maxs)
@@ -129,7 +134,7 @@ local function get_room_entrance(trigger_pos, room_number)
 			cmp_vec:Set(ent:GetPos())
 			cmp_vec.z = 0
 
-			doors[#doors + 1] = {ent, trigger_pos:DistToSqr(cmp_vec)}
+			doors[#doors + 1] = { ent, trigger_pos:DistToSqr(cmp_vec) }
 		end
 	end
 
@@ -287,7 +292,7 @@ function Apartments.Invite(room_number, guest)
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 
 	tenant:ChatPrint("Invite sent to " .. guest:Nick())
-	log_event("info", guest:Nick(), "invited to", room.name)
+	log_event("info", guest:Nick(), "was invited to", room.name)
 end
 
 function Apartments.RevokeInvitation(room_number, guest)
@@ -381,6 +386,34 @@ function Apartments.TriggerIn(ent, is_ply)
 		ent:ChatPrint("You've been temporarily banned from entering the apartments!")
 	end
 end
+
+function Apartments.RecoverEntrances()
+	local count = 0
+
+	for room_number = 1, Apartments.NUM_ROOMS do
+		local room = rooms[room_number]
+		if IsValid(room.entrance) then continue end
+
+		local entrance = get_room_entrance(room_number)
+		if not IsValid(entrance) then
+			log_event("error", "FAILED TO RECOVER ENTRANCE FOR", room.name)
+
+			return
+		end
+
+		entrances[entrance:EntIndex()] = room_number
+		room.entrance = entrance
+
+		count = count + 1
+	end
+
+	if count > 0 then
+		net_broadcast_table(SV_NET_UPDATE_ENTRANCES, entrances)
+		log_event("info", "recovered", count, "entrances")
+	end
+end
+
+timer.Create(tag .. "_recover_entrances", 5 * 60, 0, Apartments.RecoverEntrances)
 
 net.Receive(tag, function(_, ply)
 	local id = net.ReadUInt(32)
@@ -546,13 +579,10 @@ hook.Add("InitPostEntity", tag, function()
 	triggers = {}
 	entrances = {}
 
-	local lm_pos = landmark.get(ACTIVE_LANDMARK)
-
 	for room_number = 1, Apartments.NUM_ROOMS do
 		local as_two_digits = string.format("%02d", room_number)
 
-		local off = TRIGGER_OFFSETS[ACTIVE_LANDMARK][room_number]
-		local entrance = get_room_entrance(lm_pos + off, room_number)
+		local entrance = get_room_entrance(room_number)
 
 		local trigger_name = "trigger_apartment_" .. as_two_digits
 		local trigger = GetTrigger(trigger_name)
@@ -575,14 +605,11 @@ hook.Add("PostCleanupMap", tag, function()
 	entrances = {}
 	triggers = {}
 
-	local lm_pos = landmark.get(ACTIVE_LANDMARK)
-
 	for room_number = 1, Apartments.NUM_ROOMS do
 		local room = rooms[room_number]
 		local as_two_digits = string.format("%02d", room_number)
 
-		local off = TRIGGER_OFFSETS[ACTIVE_LANDMARK][room_number]
-		local entrance = get_room_entrance(lm_pos + off, room_number)
+		local entrance = get_room_entrance(room_number)
 
 		local trigger_name = "trigger_apartment_" .. as_two_digits
 		local trigger = GetTrigger(trigger_name)
