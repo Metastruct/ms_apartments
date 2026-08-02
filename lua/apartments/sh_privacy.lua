@@ -33,7 +33,7 @@ local function CanHear(speaker, listener)
 		and door:GetPos():Distance(speaker:GetPos()) < 512
 	then
 		return true
-	end 
+	end
 end
 
 if SERVER then

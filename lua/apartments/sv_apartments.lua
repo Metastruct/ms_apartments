@@ -546,21 +546,23 @@ hook.Add("TriggerPreInclude", tag, function(place, TRIGGER)
 	function TRIGGER:In(ent, is_player)
 		local room = Apartments.GetRooms()[room_number]
 
-		if not is_player and not should_entity_be_in_room(ent, room) then
-			if not ent:IsVehicle() and ent.Dissolve then ent:Dissolve() end
-			SafeRemoveEntityDelayed(ent, 3)
+		timer.Simple(0, function()
+			if not is_player and not should_entity_be_in_room(ent, room) then
+				if not ent:IsVehicle() and ent.Dissolve then ent:Dissolve() end
+				SafeRemoveEntityDelayed(ent, 3)
 
-			return
-		end
+				return
+			end
 
-		if is_player and not should_player_be_in_room(ent, room) then
-			ent:SetPos(landmark.get("apartments") or Vector())
-			ent:ChatPrint("You can't enter " .. room.name .. "!")
+			if is_player and not should_player_be_in_room(ent, room) then
+				ent:SetPos(landmark.get("apartments") or Vector())
+				ent:ChatPrint("You can't enter " .. room.name .. "!")
 
-			return
-		end
+				return
+			end
 
-		hook.Run("ApartmentEnter", ent, self, room)
+			hook.Run("ApartmentEnter", ent, self, room)
+		end)
 	end
 
 	function TRIGGER:Out(ent, is_player)
@@ -632,13 +634,13 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 	if not room.tenant then return end
 
 	local tenant = player.GetBySteamID64(room.tenant)
-	if ply.Unrestricted or tenant and tenant == ply then return end
+	if ply.Unrestricted or tenant == ply then return end
 
 	if room.passage == PASSAGE_ALL then return end
 
 	local is_guest = room.guests[ply:UserID()]
 	if room.passage == PASSAGE_GUESTS and is_guest then return end
-	if room.passage == PASSAGE_FRIENDS and is_guest or tenant and tenant.IsFriend and tenant:IsFriend(ply) then return end
+	if (room.passage == PASSAGE_FRIENDS and is_guest) or (tenant and tenant.IsFriend and tenant:IsFriend(ply)) then return end
 
 	if not entrance_last_knocked[ply] then entrance_last_knocked[ply] = CurTime() - 20 end
 	if entrance_last_knocked[ply] + 20 > CurTime() then return false end
