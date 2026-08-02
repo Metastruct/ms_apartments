@@ -224,6 +224,8 @@ function Apartments.SetTenant(room_number, tenant)
 	room._grace = nil
 	room._willed_to = nil
 
+	hook.Run("ApartmentStateChanged", room)
+
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 	log_event("info", tenant:Nick(), "rented", room.name)
 
@@ -244,6 +246,8 @@ function Apartments.TransferTenant(room_number, new_tenant)
 
 	tenants[new_tenant:SteamID64()] = room_number
 	room.tenant = new_tenant:SteamID64()
+
+	hook.Run("ApartmentStateChanged", room)
 
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 	log_event("info", new_tenant:Nick(), "received", room.name, "by transfer from", old_tenant)
@@ -269,6 +273,8 @@ function Apartments.EvictTenant(tenant)
 	room._grace = nil
 	room._willed_to = nil
 
+	hook.Run("ApartmentStateChanged", room)
+
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 	log_event("info", tenant.Nick and tenant:Nick() or tenant, "evicted from", room.name)
 end
@@ -288,6 +294,8 @@ function Apartments.Invite(room_number, guest)
 	room.guests[guest:UserID()] = true
 	guest:ChatPrint(tenant:Nick() .. " has invited you to " .. room.name .. "!")
 
+	hook.Run("ApartmentStateChanged", room)
+
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 
 	tenant:ChatPrint("Invite sent to " .. guest:Nick())
@@ -298,14 +306,19 @@ function Apartments.RevokeInvitation(room_number, guest)
 	if not is_valid_room(room_number) or not guest:IsPlayer() then return end
 
 	local room = rooms[room_number]
+	local tenant = player.GetBySteamID64(room.tenant)
 	local guest_uid = guest:UserID()
 
 	if room.guests[guest_uid] then
 		room.guests[guest_uid] = nil
 
-		if room.trigger:GetPlayers()[guest] then
+		if room.trigger.pllist[guest_uid] and room.passage ~= PASSAGE_ALL
+		and not (room.passage == PASSAGE_FRIENDS and tenant.IsFriend and tenant:IsFriend(guest)) then
 			guest:SetPos(landmark.get("apartments") or Vector())
+			guest:ChatPrint("You've been kicked out!")
 		end
+
+		hook.Run("ApartmentStateChanged", room)
 
 		net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 		log_event("info", "invite revoked for", guest:Nick(), "from", room.name)
@@ -343,6 +356,8 @@ function Apartments.SetPassage(room_number, state)
 			end
 		end
 	end
+
+	hook.Run("ApartmentStateChanged", room)
 
 	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 

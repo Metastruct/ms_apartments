@@ -8,11 +8,10 @@ function Apartments.TempBan(ply)
 	local ply_sid64 = ply.IsPlayer and ply:IsPlayer() and ply:SteamID64() or ply
 	session_blacklist[ply_sid64] = true
 
-	local match = player.GetBySteamID64(ply_sid64)
-
-	if match then
-		match:Spawn()
-		match:ChatPrint("You've been temporarily banned from entering the apartments!")
+	ply = player.GetBySteamID64(ply_sid64)
+	if ply then
+		ply:Spawn()
+		ply:ChatPrint("You've been temporarily banned from entering the apartments!")
 	end
 
 	Apartments.log_event("info", "temporarily banned", ply_sid64, "from apartments")
@@ -66,5 +65,25 @@ hook.Add("ApartmentLeave", tag .. "_building", function(ent, trigger, room)
 	local apt_trigger = GetTrigger("apartments")
 	if ent:CanBuild() and apt_trigger.pllist[ent:UserID()] then
 		ent:SetAllowBuild(false, tag)
+	end
+end)
+
+hook.Add("ApartmentStateChanged", tag, function(room)
+	if not IsValid(room.trigger) then return end
+
+	for ply, uid in pairs(room.trigger:GetPlayers()) do
+		if room.tenant == ply:SteamID64() then
+			ply:SetAllowBuild(true, tag)
+			continue
+		end
+
+		if room.guests[uid] and not ply:CanBuild() then
+			ply:SetAllowBuild(true, tag)
+			continue
+		end
+
+		if not room.guests[uid] and ply:CanBuild() then
+			ply:SetAllowBuild(false, tag)
+		end
 	end
 end)
