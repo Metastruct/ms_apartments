@@ -10,6 +10,7 @@ if SERVER then
 
 	include("apartments/sv_apartments.lua")
 	include("apartments/sv_nocollide.lua")
+	include("apartments/sv_restrictions.lua")
 end
 
 if CLIENT then

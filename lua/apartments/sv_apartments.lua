@@ -58,9 +58,6 @@ else
 	entrances = {}
 end
 
-Apartments.session_blacklist = {}
-local session_blacklist = Apartments.session_blacklist -- also cleared on reload but that's fine
-
 local entrance_last_knocked = {}
 local knocks_accumulated = {}
 
@@ -80,11 +77,13 @@ local CL_NET_INVITE = 5
 local CL_NET_PASSAGE = 6
 local CL_NET_TRANSFER = 7
 
-local function log_event(log_type, ...)
+function Apartments.log_event(log_type, ...)
 	if not metalog or not metalog[log_type] then return end
 
 	metalog[log_type]("Apartments", nil, ...)
 end
+
+local log_event = Apartments.log_event
 
 local function net_broadcast_table(id, tbl)
 	net.Start(tag)
@@ -357,34 +356,6 @@ function Apartments.GetPassage(room_number)
 	if not is_valid_room(room_number) then return end
 
 	return rooms[room_number].passage
-end
-
-function Apartments.TempBan(ply)
-	local ply_sid64 = ply.IsPlayer and ply:IsPlayer() and ply:SteamID64() or ply
-	session_blacklist[ply_sid64] = true
-
-	local match = player.GetBySteamID64(ply_sid64)
-
-	if match then
-		match:Spawn()
-		match:ChatPrint("You've been temporarily banned from entering the apartments!")
-	end
-
-	log_event("info", "temporarily banned", ply_sid64, "from apartments")
-end
-
-function Apartments.Unban(ply)
-	local ply_sid64 = ply.IsPlayer and ply:IsPlayer() and ply:SteamID64() or ply
-	session_blacklist[ply_sid64] = nil
-
-	log_event("info", "unbanned", ply_sid64, "from apartments")
-end
-
-function Apartments.TriggerIn(ent, is_ply)
-	if is_ply and session_blacklist[ent:SteamID64()] then
-		ent:Spawn()
-		ent:ChatPrint("You've been temporarily banned from entering the apartments!")
-	end
 end
 
 function Apartments.RecoverEntrances()
