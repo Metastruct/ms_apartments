@@ -76,6 +76,7 @@ local CL_NET_RENT = 4
 local CL_NET_INVITE = 5
 local CL_NET_PASSAGE = 6
 local CL_NET_TRANSFER = 7
+local CL_NET_BLACKLIST = 8
 
 function Apartments.log_event(log_type, ...)
 	if not metalog or not metalog[log_type] then return end
@@ -152,6 +153,10 @@ local function should_entity_be_in_room(ent, room)
 		return true
 	end
 
+	if room.blacklist and room.blacklist[owner:SteamID()] then
+		return false
+	end
+
 	if room.guests[owner:UserID()] then
 		return true
 	end
@@ -169,6 +174,10 @@ local function should_player_be_in_room(ply, room)
 		local tenant = player.GetBySteamID64(room.tenant)
 		if tenant and ply == tenant then
 			return true
+		end
+
+		if room.blacklist and room.blacklist[ply:SteamID()] then
+			return false
 		end
 
 		if room.guests[ply:UserID()] then
@@ -220,6 +229,7 @@ function Apartments.SetTenant(room_number, tenant)
 	room.tenant = tenant:SteamID64()
 	room.passage = PASSAGE_ALL
 	room.guests = {}
+	room.blacklist = {}
 
 	room._grace = nil
 	room._willed_to = nil
@@ -269,6 +279,7 @@ function Apartments.EvictTenant(tenant)
 	room.tenant = nil
 	room.passage = PASSAGE_GUESTS
 	room.guests = {}
+	room.blacklist = {}
 
 	room._grace = nil
 	room._willed_to = nil
@@ -290,6 +301,11 @@ function Apartments.Invite(room_number, guest)
 
 	local room = rooms[room_number]
 	local tenant = player.GetBySteamID64(room.tenant)
+
+	if room.blacklist and room.blacklist[guest:SteamID()] then
+		if tenant then tenant:ChatPrint("Can't invite " .. guest:Nick() .. ", they're blacklisted. Unblacklist them first.") end
+		return
+	end
 
 	room.guests[guest:UserID()] = true
 	guest:ChatPrint(tenant:Nick() .. " has invited you to " .. room.name .. "!")
@@ -323,6 +339,45 @@ function Apartments.RevokeInvitation(room_number, guest)
 		net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 		log_event("info", "invite revoked for", guest:Nick(), "from", room.name)
 	end
+end
+
+function Apartments.SetBlacklist(room_number, target, state)
+	if not is_valid_room(room_number) or not target:IsPlayer() then return end
+
+	local room = rooms[room_number]
+	room.blacklist = room.blacklist or {}
+
+	if target:SteamID64() == room.tenant then return end
+
+	local target_sid = target:SteamID()
+	local tenant = player.GetBySteamID64(room.tenant)
+
+	if tobool(state) then
+		if target.Unrestricted then
+			if tenant then tenant:ChatPrint("You can't blacklist that player.") end
+			return
+		end
+
+		room.blacklist[target_sid] = true
+		room.guests[target:UserID()] = nil
+
+		if room.trigger and room.trigger.pllist[target:UserID()] then
+			target:SetPos(landmark.get("apartments") or Vector())
+			target:ChatPrint("You've been blacklisted from " .. room.name .. "!")
+		end
+
+		if tenant then tenant:ChatPrint(target:Nick() .. " has been blacklisted from " .. room.name .. ".") end
+		log_event("info", target:Nick(), "was blacklisted from", room.name)
+	else
+		if not room.blacklist[target_sid] then return end
+		room.blacklist[target_sid] = nil
+
+		if tenant then tenant:ChatPrint(target:Nick() .. " is no longer blacklisted from " .. room.name .. ".") end
+		log_event("info", target:Nick(), "was unblacklisted from", room.name)
+	end
+
+	hook.Run("ApartmentStateChanged", room)
+	net_broadcast_table(SV_NET_UPDATE_ROOMS, rooms)
 end
 
 function Apartments.GetInvited(room_number, guest)
@@ -438,6 +493,15 @@ net.Receive(tag, function(_, ply)
 
 	if id == CL_NET_PASSAGE then
 		Apartments.SetPassage(room_number, state)
+
+		return
+	end
+
+	if id == CL_NET_BLACKLIST then
+		local target = Player(net.ReadUInt(32))
+		if not target:IsPlayer() then return end
+
+		Apartments.SetBlacklist(room_number, target, state)
 
 		return
 	end
@@ -584,6 +648,7 @@ hook.Add("InitPostEntity", tag, function()
 			trigger = trigger,
 			passage = PASSAGE_GUESTS,
 			guests = {},
+			blacklist = {},
 			-- tenant
 		}
 	end
@@ -621,6 +686,8 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 
 	local tenant = player.GetBySteamID64(room.tenant)
 	if ply.Unrestricted or tenant == ply then return end
+
+	if room.blacklist and room.blacklist[ply:SteamID()] then return false end
 
 	if room.passage == PASSAGE_ALL then return end
 
