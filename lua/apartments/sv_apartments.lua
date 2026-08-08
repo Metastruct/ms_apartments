@@ -682,6 +682,8 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 	local tenant = player.GetBySteamID64(room.tenant)
 	if ply.Unrestricted or tenant == ply then return end
 
+	if room.blacklist and room.blacklist[ply:SteamID64()] then return false end
+
 	if room.passage == PASSAGE_ALL then return end
 
 	local is_guest = room.guests[ply:UserID()]
