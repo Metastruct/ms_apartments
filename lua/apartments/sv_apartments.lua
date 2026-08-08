@@ -153,7 +153,7 @@ local function should_entity_be_in_room(ent, room)
 		return true
 	end
 
-	if room.blacklist and room.blacklist[owner:SteamID64()] then
+	if room.blacklist and room.blacklist[owner:SteamID()] then
 		return false
 	end
 
@@ -176,7 +176,7 @@ local function should_player_be_in_room(ply, room)
 			return true
 		end
 
-		if room.blacklist and room.blacklist[ply:SteamID64()] then
+		if room.blacklist and room.blacklist[ply:SteamID()] then
 			return false
 		end
 
@@ -342,9 +342,9 @@ function Apartments.SetBlacklist(room_number, target, state)
 	local room = rooms[room_number]
 	room.blacklist = room.blacklist or {}
 
-	local target_sid64 = target:SteamID64()
-	if target_sid64 == room.tenant then return end
+	if target:SteamID64() == room.tenant then return end
 
+	local target_sid = target:SteamID()
 	local tenant = player.GetBySteamID64(room.tenant)
 
 	if tobool(state) then
@@ -353,7 +353,7 @@ function Apartments.SetBlacklist(room_number, target, state)
 			return
 		end
 
-		room.blacklist[target_sid64] = true
+		room.blacklist[target_sid] = true
 		room.guests[target:UserID()] = nil
 
 		if room.trigger and room.trigger.pllist[target:UserID()] then
@@ -364,8 +364,8 @@ function Apartments.SetBlacklist(room_number, target, state)
 		if tenant then tenant:ChatPrint(target:Nick() .. " has been blacklisted from " .. room.name .. ".") end
 		log_event("info", target:Nick(), "was blacklisted from", room.name)
 	else
-		if not room.blacklist[target_sid64] then return end
-		room.blacklist[target_sid64] = nil
+		if not room.blacklist[target_sid] then return end
+		room.blacklist[target_sid] = nil
 
 		if tenant then tenant:ChatPrint(target:Nick() .. " is no longer blacklisted from " .. room.name .. ".") end
 		log_event("info", target:Nick(), "was unblacklisted from", room.name)
@@ -682,7 +682,7 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 	local tenant = player.GetBySteamID64(room.tenant)
 	if ply.Unrestricted or tenant == ply then return end
 
-	if room.blacklist and room.blacklist[ply:SteamID64()] then return false end
+	if room.blacklist and room.blacklist[ply:SteamID()] then return false end
 
 	if room.passage == PASSAGE_ALL then return end
 
