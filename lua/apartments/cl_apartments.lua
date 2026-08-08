@@ -105,7 +105,7 @@ local function apartment_ui(room_number)
 	end
 
 	local root = vgui.Create("DFrame")
-	root:SetSize(250, 250)
+	root:SetSize(250, 290)
 	root:SetSizable(false)
 	root:SetTitle(room.name)
 	root:Center()
