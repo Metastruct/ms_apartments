@@ -29,6 +29,7 @@ local CL_NET_RENT = 4
 local CL_NET_INVITE = 5
 local CL_NET_PASSAGE = 6
 local CL_NET_TRANSFER = 7
+local CL_NET_BLACKLIST = 8
 
 local hooks
 local willed_to
@@ -62,6 +63,15 @@ local function request_invite_from_server(room_number, state, guest_uid)
 	net.WriteUInt(room_number, 32)
 	net.WriteUInt(state, 32)
 	net.WriteUInt(guest_uid, 32)
+	net.SendToServer()
+end
+
+local function request_blacklist_from_server(room_number, state, target_uid)
+	net.Start(tag)
+	net.WriteUInt(CL_NET_BLACKLIST, 32)
+	net.WriteUInt(room_number, 32)
+	net.WriteUInt(state, 32)
+	net.WriteUInt(target_uid, 32)
 	net.SendToServer()
 end
 
@@ -188,12 +198,33 @@ local function apartment_ui(room_number)
 		root:Close()
 	end
 
+	local blacklist_btn = invite_panel:Add("DButton")
+	blacklist_btn:SetEnabled(false)
+	blacklist_btn:SetText("Blacklist Player")
+	blacklist_btn:Dock(TOP)
+	blacklist_btn:DockMargin(0, 7, 0, 0)
+
+	blacklist_btn.Paint = btn_paint
+
+	function blacklist_btn:DoClick()
+		local _, ply = invite_list:GetSelected()
+		if not ply then return end
+
+		local is_blacklisted = room.blacklist and room.blacklist[ply:SteamID64()]
+		request_blacklist_from_server(room_number, is_blacklisted and 0 or 1, ply:UserID())
+		root:Close()
+	end
+
 	function invite_list:OnSelect()
 		local _, ply = self:GetSelected()
 		if not ply then return end
 
 		invite_btn:SetText(room.guests[ply:UserID()] and "Kick" or "Invite")
 		invite_btn:SetEnabled(true)
+
+		local is_blacklisted = room.blacklist and room.blacklist[ply:SteamID64()]
+		blacklist_btn:SetText(is_blacklisted and "Unblacklist Player" or "Blacklist Player")
+		blacklist_btn:SetEnabled(true)
 	end
 
 	local passage_lb = invite_panel:Add("DLabel")
