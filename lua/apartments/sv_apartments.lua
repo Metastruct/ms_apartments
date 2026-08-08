@@ -302,6 +302,11 @@ function Apartments.Invite(room_number, guest)
 	local room = rooms[room_number]
 	local tenant = player.GetBySteamID64(room.tenant)
 
+	if room.blacklist and room.blacklist[guest:SteamID()] then
+		if tenant then tenant:ChatPrint("Can't invite " .. guest:Nick() .. ", they're blacklisted. Unblacklist them first.") end
+		return
+	end
+
 	room.guests[guest:UserID()] = true
 	guest:ChatPrint(tenant:Nick() .. " has invited you to " .. room.name .. "!")
 

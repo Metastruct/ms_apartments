@@ -219,10 +219,16 @@ local function apartment_ui(room_number)
 		local _, ply = self:GetSelected()
 		if not ply then return end
 
-		invite_btn:SetText(room.guests[ply:UserID()] and "Kick" or "Invite")
-		invite_btn:SetEnabled(true)
-
 		local is_blacklisted = room.blacklist and room.blacklist[ply:SteamID()]
+
+		if is_blacklisted then
+			invite_btn:SetText("Blacklisted")
+			invite_btn:SetEnabled(false)
+		else
+			invite_btn:SetText(room.guests[ply:UserID()] and "Kick" or "Invite")
+			invite_btn:SetEnabled(true)
+		end
+
 		blacklist_btn:SetText(is_blacklisted and "Unblacklist Player" or "Blacklist Player")
 		blacklist_btn:SetEnabled(true)
 	end
