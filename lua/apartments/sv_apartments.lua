@@ -693,7 +693,7 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 
 	local is_guest = room.guests[ply:UserID()]
 	if room.passage == PASSAGE_GUESTS and is_guest then return end
-	if (room.passage == PASSAGE_FRIENDS and is_guest) or (tenant and tenant.IsFriend and tenant:IsFriend(ply)) then return end
+	if room.passage == PASSAGE_FRIENDS and (is_guest or tenant and tenant.IsFriend and tenant:IsFriend(ply)) then return end
 
 	if not entrance_last_knocked[ply] then entrance_last_knocked[ply] = CurTime() - 20 end
 	if entrance_last_knocked[ply] + 20 > CurTime() then return false end
