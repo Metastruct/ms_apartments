@@ -685,7 +685,7 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 	if not room.tenant then return end
 
 	local tenant = player.GetBySteamID64(room.tenant)
-	if ply.Unrestricted or tenant == ply or type(tenant) ~= "Player" then return end
+	if ply.Unrestricted or tenant == ply then return end
 
 	if room.blacklist and room.blacklist[ply:SteamID()] then return false end
 
@@ -718,7 +718,7 @@ hook.Add("PlayerUse", tag .. "_knocking", function(ply, ent)
 
 	knock_on_entrance(ent)
 
-	if istable(room.trigger.pllist) and room.trigger.pllist[tenant:UserID()] then
+	if tenant and istable(room.trigger.pllist) and room.trigger.pllist[tenant:UserID()] then
 		tenant:ChatPrint(ply:Nick(), "is at your door!")
 	end
 
